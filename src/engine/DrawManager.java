@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import screen.MenuItem;
 import screen.Screen;
+import entity.Coin;
 import entity.Entity;
 import entity.Ship;
 
@@ -199,6 +200,105 @@ public final class DrawManager {
 				if (image[i][j])
 					backBufferGraphics.drawRect(positionX + i * 2, positionY
 							+ j * 2, 1, 1);
+	}
+
+	/**
+	 * Draws a dropped coin as a filled circle (GoG - Currency System).
+	 * Coins have no entry in the shared sprite file, so they are drawn
+	 * here instead of through drawEntity().
+	 *
+	 * @param coin
+	 *            Coin to be drawn.
+	 * @param positionX
+	 *            Coordinates for the left side of the coin.
+	 * @param positionY
+	 *            Coordinates for the upper side of the coin.
+	 */
+	public void drawCoin(final Coin coin, final int positionX,
+			final int positionY) {
+		backBufferGraphics.setColor(coin.getColor());
+		backBufferGraphics.fillOval(positionX, positionY, coin.getWidth(),
+				coin.getHeight());
+	}
+
+	/**
+	 * Draws a coin balance as a small coin icon followed by the amount,
+	 * centered along the top bar of the screen (GoG - Currency System).
+	 * Used by the in-game HUD and the shop.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param coins
+	 *            Coin balance to display.
+	 */
+	public void drawCoinBalance(final Screen screen, final int coins) {
+		drawCoinBalance(screen, coins, 25);
+	}
+
+	/**
+	 * Draws a coin balance as a small coin icon followed by the amount,
+	 * centered horizontally at the given baseline (GoG - Currency System).
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param coins
+	 *            Coin balance to display.
+	 * @param positionY
+	 *            Baseline Y coordinate of the text.
+	 */
+	public void drawCoinBalance(final Screen screen, final int coins,
+			final int positionY) {
+		final int iconSize = 14;
+		final int iconTextGap = 6;
+
+		backBufferGraphics.setFont(fontRegular);
+		String balanceString = Integer.toString(coins);
+		int totalWidth = iconSize + iconTextGap
+				+ fontRegularMetrics.stringWidth(balanceString);
+		int startX = (screen.getWidth() - totalWidth) / 2;
+
+		backBufferGraphics.setColor(Color.YELLOW);
+		backBufferGraphics.fillOval(startX, positionY - iconSize + 1,
+				iconSize, iconSize);
+		backBufferGraphics.setColor(Color.WHITE);
+		backBufferGraphics.drawString(balanceString, startX + iconSize
+				+ iconTextGap, positionY);
+	}
+
+	/**
+	 * Draws a diamond balance as a small diamond icon followed by the
+	 * amount, centered horizontally at the given baseline, so it can be
+	 * stacked with the coin balance (GoG - Currency System).
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param diamonds
+	 *            Diamond balance to display.
+	 * @param positionY
+	 *            Baseline Y coordinate of the text.
+	 */
+	public void drawDiamondBalance(final Screen screen, final int diamonds,
+			final int positionY) {
+		final int iconSize = 14;
+		final int iconTextGap = 6;
+
+		backBufferGraphics.setFont(fontRegular);
+		String balanceString = Integer.toString(diamonds);
+		int totalWidth = iconSize + iconTextGap
+				+ fontRegularMetrics.stringWidth(balanceString);
+		int startX = (screen.getWidth() - totalWidth) / 2;
+		int iconTop = positionY - iconSize + 1;
+
+		int[] xPoints = { startX + iconSize / 2, startX + iconSize,
+				startX + iconSize / 2, startX };
+		int[] yPoints = { iconTop, iconTop + iconSize / 2,
+				iconTop + iconSize, iconTop + iconSize / 2 };
+
+		backBufferGraphics.setColor(Color.CYAN);
+		backBufferGraphics.fillPolygon(xPoints, yPoints, 4);
+		backBufferGraphics.setColor(Color.WHITE);
+		backBufferGraphics.drawString(balanceString, startX + iconSize
+				+ iconTextGap, positionY);
 	}
 
 	/**
@@ -694,8 +794,10 @@ public final class DrawManager {
 			drawCenteredBigString(screen, "GO!", screen.getHeight() / 2
 					+ fontBigMetrics.getHeight() / 3);
 	}
+
 	/**
-	 * Draws centered text for the settings screen.
+	 * Draws a centered row of text in the menu colours: green when
+	 * selected, white otherwise.
 	 *
 	 * @param screen
 	 *            Screen to draw on.
@@ -704,13 +806,37 @@ public final class DrawManager {
 	 * @param height
 	 *            Height of the drawing.
 	 * @param selected
-	 *            Whether the text is currently selected.
+	 *            Whether the row is currently selected.
 	 */
-	public void drawMenuRow(final Screen screen,
-								 final String string, final int height,
-								 final boolean selected) {
-		backBufferGraphics.setColor(
-				selected ? Color.GREEN : Color.WHITE);
+	public void drawMenuRow(final Screen screen, final String string,
+			final int height, final boolean selected) {
+		drawMenuRow(screen, string, height, selected, true);
+	}
+
+	/**
+	 * Draws a centered row of text in the menu colours: green when
+	 * selected, dark grey when disabled, white otherwise.
+	 *
+	 * @param screen
+	 *            Screen to draw on.
+	 * @param string
+	 *            Text to draw.
+	 * @param height
+	 *            Height of the drawing.
+	 * @param selected
+	 *            Whether the row is currently selected.
+	 * @param enabled
+	 *            Whether the row can be chosen.
+	 */
+	public void drawMenuRow(final Screen screen, final String string,
+			final int height, final boolean selected,
+			final boolean enabled) {
+		if (selected)
+			backBufferGraphics.setColor(Color.GREEN);
+		else if (!enabled)
+			backBufferGraphics.setColor(Color.DARK_GRAY);
+		else
+			backBufferGraphics.setColor(Color.WHITE);
 		drawCenteredRegularString(screen, string, height);
 	}
 }
