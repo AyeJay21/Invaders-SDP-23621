@@ -49,6 +49,11 @@ public final class DrawManager {
 	/** Big sized font properties. */
 	private static FontMetrics fontBigMetrics;
 
+		/** Font used for the highlighted menu item. */
+	private static Font fontSelected;
+	/** Highlighted menu item font properties. */
+	private static FontMetrics fontSelectedMetrics;
+
 	/** Sprite types mapped to their images. */
 	private static Map<SpriteType, boolean[][]> spriteMap;
 
@@ -113,6 +118,7 @@ public final class DrawManager {
 			// Font loading.
 			fontRegular = fileManager.loadFont(14f);
 			fontBig = fileManager.loadFont(24f);
+			fontSelected = fontRegular.deriveFont(17f);
 			logger.info("Finished loading the fonts.");
 
 		} catch (IOException e) {
@@ -167,6 +173,7 @@ public final class DrawManager {
 
 		fontRegularMetrics = backBufferGraphics.getFontMetrics(fontRegular);
 		fontBigMetrics = backBufferGraphics.getFontMetrics(fontBig);
+				fontSelectedMetrics = backBufferGraphics.getFontMetrics(fontSelected);
 
 		// drawBorders(screen);
 		// drawGrid(screen);
@@ -450,14 +457,21 @@ public final class DrawManager {
 	 */
 	public void drawMenu(final Screen screen, final MenuItem selected) {
 		for (MenuItem item : MenuItem.values()) {
-			if (item == selected)
+			int baseline = menuItemBaseline(screen, item.ordinal());
+
+			if (item == selected) {
+				String text = "> " + item.getTitle() + " <";
 				backBufferGraphics.setColor(Color.GREEN);
-			else if (!item.isEnabled())
-				backBufferGraphics.setColor(Color.DARK_GRAY);
-			else
-				backBufferGraphics.setColor(Color.WHITE);
-			drawCenteredRegularString(screen, item.getTitle(),
-					menuItemBaseline(screen, item.ordinal()));
+				backBufferGraphics.setFont(fontSelected);
+				backBufferGraphics.drawString(text, screen.getWidth() / 2
+						- fontSelectedMetrics.stringWidth(text) / 2, baseline);
+			} else {
+				if (!item.isEnabled())
+					backBufferGraphics.setColor(Color.DARK_GRAY);
+				else
+					backBufferGraphics.setColor(Color.WHITE);
+				drawCenteredRegularString(screen, item.getTitle(), baseline);
+			}
 		}
 	}
 
