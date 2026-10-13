@@ -137,15 +137,17 @@ public class EnemyShip extends Entity {
 	/**
 	 * Destroys the ship, causing an explosion.
 	 */
-	public final void destroy() {
-		this.isDestroyed = true;
-		this.spriteType = SpriteType.Explosion;
-        SoundManager.playSound("explosion1.wav");
-	}
+    public final void destroy() {
+        if (!this.isDestroyed) {
+            this.isDestroyed = true;
+            this.spriteType = SpriteType.Explosion;
+            SoundManager.playSound("destroy.wav");
+        }
+    }
 
 	/**
 	 * Checks if the ship has been destroyed.
-	 * 
+	 *
 	 * @return True if the ship has been destroyed.
 	 */
 	public final boolean isDestroyed() {
