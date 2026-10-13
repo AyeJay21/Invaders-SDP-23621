@@ -21,8 +21,8 @@ public interface AudioBackend {
 	void preload(Sound sound);
 
 	/**
-	 * Plays a short effect once. Calling this while the same effect is still
-	 * playing restarts it.
+	 * Plays a short effect once, allowing repeated effects to overlap without
+	 * stopping active voices. A backend may skip new requests at capacity.
 	 *
 	 * @param sound
 	 *            Sound to play.
