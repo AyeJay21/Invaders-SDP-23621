@@ -24,6 +24,8 @@ import engine.DamageDimEffect;
 import engine.GameEvents;
 import engine.GlitchEffect;
 import engine.ScreenShake;
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -322,6 +324,7 @@ public class GameScreen extends Screen {
 		this.pauseKeyCooldown = Core.getCooldown(PAUSE_KEY_DEBOUNCE);
 		this.pauseSelectionCooldown = Core.getCooldown(PAUSE_SELECTION_DEBOUNCE);
 		this.pauseSelection = PauseOption.RESUME;
+		SoundManager.getInstance().preloadSfx(Sound.SHOOT);
 
 		// Item System (Team CS): level 1 starts a new run, later levels keep it.
 		this.items = ItemSystem.forLevel(this.level);
@@ -414,9 +417,11 @@ public class GameScreen extends Screen {
 				if (moveLeft && !isLeftBorder) {
 					this.ship.moveLeft();
 				}
-				if (inputManager.isKeyDown(KeyEvent.VK_SPACE))
-					if (this.ship.shoot(this.bullets))
-						this.bulletsShot++;
+				if (inputManager.isKeyDown(KeyEvent.VK_SPACE)
+						&& this.ship.shoot(this.bullets)) {
+					this.bulletsShot++;
+					SoundManager.getInstance().playSfx(Sound.SHOOT);
+				}
 				useItemSlots(); // Item System (Team CS)
 			}
 

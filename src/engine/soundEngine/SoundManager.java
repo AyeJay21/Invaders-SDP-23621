@@ -1,5 +1,9 @@
 package engine.soundEngine;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import engine.Core;
@@ -35,12 +39,18 @@ public final class SoundManager {
 
 	/** Backend that does the actual playback. */
 	private final AudioBackend backend;
+	/** Serializes slow SFX operations away from the game update thread. */
+	private final ThreadPoolExecutor sfxWorker;
+	/** Protects enqueue and shutdown without waiting for backend operations. */
+	private final Object sfxLifecycleLock = new Object();
 	/** Volume of sound effects. */
-	private float sfxVolume;
+	private volatile float sfxVolume;
 	/** Volume of background music. */
 	private float bgmVolume;
 	/** Whether all audio is muted. */
-	private boolean muted;
+	private volatile boolean muted;
+	/** Stops accepting requests after disposal. */
+	private volatile boolean disposed;
 	/** Music that should be playing, even while muted. */
 	private Sound currentBgm;
 
@@ -48,20 +58,37 @@ public final class SoundManager {
 	 * Private constructor.
 	 */
 	private SoundManager() {
+		this(createBackend());
+	}
+
+	/** Creates a manager with an injectable backend for concurrency tests. */
+	SoundManager(final AudioBackend audioBackend) {
 		logger = Core.getLogger();
 		sfxVolume = DEFAULT_SFX_VOLUME;
 		bgmVolume = DEFAULT_BGM_VOLUME;
+		backend = audioBackend;
+		sfxWorker = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+				new ArrayBlockingQueue<Runnable>(8), new ThreadFactory() {
+					@Override
+					public Thread newThread(final Runnable task) {
+						Thread thread = new Thread(task, "invaders-sfx");
+						thread.setDaemon(true);
+						return thread;
+					}
+				}, new ThreadPoolExecutor.DiscardOldestPolicy());
+	}
 
-		AudioBackend chosen;
+	/** Selects the real backend or a silent fallback. */
+	private static AudioBackend createBackend() {
 		try {
-			chosen = JavaSoundBackend.isAvailable()
+			return JavaSoundBackend.isAvailable()
 					? new JavaSoundBackend()
 					: new SilentBackend();
 		} catch (RuntimeException e) {
-			logger.warning("Audio initialization failed: " + e.getMessage());
-			chosen = new SilentBackend();
+			Core.getLogger().warning("Audio initialization failed: "
+					+ e.getMessage());
+			return new SilentBackend();
 		}
-		backend = chosen;
 	}
 
 	/**
@@ -69,35 +96,85 @@ public final class SoundManager {
 	 *
 	 * @return Shared instance of SoundManager.
 	 */
-	public static SoundManager getInstance() {
+	public static synchronized SoundManager getInstance() {
 		if (instance == null)
 			instance = new SoundManager();
 		return instance;
 	}
 
 	/**
-	 * Loads all sound effects into memory. Call once at startup so the first
-	 * shot does not stutter. Background music is streamed on demand instead,
-	 * because it is much larger.
+	 * Queues loading of all sound effects before subsequent SFX requests.
+	 * Loading and playback share one worker so neither stalls game updates.
 	 */
-	public synchronized void preloadSfx() {
-		for (Sound sound : Sound.values())
-			backend.preload(sound);
+	public void preloadSfx() {
+		enqueueSfx(new Runnable() {
+			@Override
+			public void run() {
+				for (Sound sound : Sound.values()) {
+					if (disposed)
+						return;
+					backend.preload(sound);
+				}
+			}
+		});
 	}
 
 	/**
-	 * Plays a short effect. Ignored while muted or when the sound is not an
-	 * effect.
+	 * Queues loading of a single effect, without requiring other SFX assets.
+	 *
+	 * @param sound Effect to prepare before gameplay starts.
+	 */
+	public void preloadSfx(final Sound sound) {
+		if (sound == null || sound.getCategory() != Sound.Category.SFX)
+			return;
+		enqueueSfx(new Runnable() {
+			@Override
+			public void run() {
+				backend.preload(sound);
+			}
+		});
+	}
+
+	/**
+	 * Queues a short effect without waiting for the audio device. Ignored
+	 * while muted or when the sound is not an effect. A bounded queue drops
+	 * the oldest pending request if playback cannot keep up.
 	 *
 	 * @param sound
 	 *            Effect to play.
 	 */
-	public synchronized void playSfx(final Sound sound) {
+	public void playSfx(final Sound sound) {
 		if (muted || sound == null)
 			return;
 		if (sound.getCategory() != Sound.Category.SFX)
 			return;
-		backend.playSfx(sound, sfxVolume);
+		enqueueSfx(new Runnable() {
+			@Override
+			public void run() {
+				if (!muted)
+					backend.playSfx(sound, sfxVolume);
+			}
+		});
+	}
+
+	/** Enqueues device work without holding the manager's state lock. */
+	private void enqueueSfx(final Runnable task) {
+		synchronized (sfxLifecycleLock) {
+			if (disposed)
+				return;
+			sfxWorker.execute(new Runnable() {
+				@Override
+				public void run() {
+					if (disposed)
+						return;
+					try {
+						task.run();
+					} catch (RuntimeException e) {
+						logger.warning("Sound effect failed: " + e.getMessage());
+					}
+				}
+			});
+		}
 	}
 
 	/**
@@ -108,7 +185,7 @@ public final class SoundManager {
 	 *            Music to play.
 	 */
 	public synchronized void playBgm(final Sound sound) {
-		if (sound == null || sound.getCategory() != Sound.Category.BGM)
+		if (disposed || sound == null || sound.getCategory() != Sound.Category.BGM)
 			return;
 		if (sound == currentBgm && backend.isBgmPlaying())
 			return;
@@ -195,10 +272,23 @@ public final class SoundManager {
 	}
 
 	/**
-	 * Releases all audio resources. Called when the game exits.
+	 * Discards pending effects and queues resource cleanup after any active
+	 * SFX operation. Called when the game exits; does not wait for the device.
 	 */
 	public synchronized void dispose() {
-		currentBgm = null;
-		backend.dispose();
+		synchronized (sfxLifecycleLock) {
+			if (disposed)
+				return;
+			disposed = true;
+			currentBgm = null;
+			sfxWorker.getQueue().clear();
+			sfxWorker.execute(new Runnable() {
+				@Override
+				public void run() {
+					backend.dispose();
+				}
+			});
+			sfxWorker.shutdown();
+		}
 	}
 }

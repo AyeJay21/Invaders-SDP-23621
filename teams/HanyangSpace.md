@@ -26,6 +26,9 @@ The team is also in charge of creating and triggering sound effects for gameplay
 
 * **Weapon & Combat SFX**
     * **Shooting:** Crisp audio feedback for firing projectiles.
+        * Player firing uses `res/sounds/shoot.wav` (1 second with a 10 ms fade-out, PCM 16-bit, 44,100 Hz) through `SoundManager`. The effect plays once per successful shot, including a two-way volley; holding Space during the shooting cooldown does not trigger extra sounds. Up to eight preopened voices allow repeated shots to overlap and finish naturally. If all voices are busy, a new sound request is skipped rather than cutting off an active sound.
+        * The game screen queues preloading before its countdown. SFX loading and playback run on a dedicated audio worker so slow audio device calls do not block frame updates. At most eight pending operations are retained; the oldest pending request is dropped when the queue is full.
+        * After compiling the game, compile the device-independent regression checks with `javac -cp bin -d bin tests/engine/soundEngine/*.java`. Run `java -cp bin:res engine.soundEngine.SoundManagerTest` for concurrency and `java -cp bin:res engine.soundEngine.JavaSoundBackendTest` for overlapping voices. Check actual playback by holding Space during gameplay; frame updates should continue smoothly and previous shot sounds should finish without being restarted.
     * **Player Damage & Death:** Distinct sound effects for taking damage and player destruction/death sequence.
     * **Enemy Destruction:** Dynamic explosion sounds when defeating standard enemies or bosses.
 * **Dynamic BGM & Atmospheric Audio**
