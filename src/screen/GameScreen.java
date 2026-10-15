@@ -23,7 +23,9 @@ import engine.Achievement;
 import engine.DamageDimEffect;
 import engine.GameEvents;
 import engine.GlitchEffect;
+import engine.PurchaseManager;
 import engine.ScreenShake;
+import engine.PointsEffect;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -96,6 +98,10 @@ public class GameScreen extends Screen {
 	private static final int COIN_VALUE = 1;
 	/** Coins guaranteed when the special bonus ship is destroyed. */
 	private static final int BONUS_COIN_VALUE = 5;
+	/** Delay before the extra score boost popup follows the normal one (ms, Team CS). */
+	private static final int SCORE_BOOST_POPUP_DELAY = 250;
+	/** The extra score boost popup starts this much lower, so the two can be told apart (px, Team CS). */
+	private static final int SCORE_BOOST_POPUP_OFFSET_Y = 14;
 	/** Minimum time between two pause-key toggles, to debounce the key. */
 	private static final int PAUSE_KEY_DEBOUNCE = 200;
 	/** Minimum time between two pause-menu cursor moves. */
@@ -222,13 +228,19 @@ public class GameScreen extends Screen {
 	private GlitchEffect glitch;
 	/** Screen shake when an enemy is destroyed. */
 	private ScreenShake screenShake;
+	/** Points shown when enemies are destroyed. AUTHORED BY: VFX TEAM (Effection) */
+	private PointsEffect pointsEffect;
 	/** Diamonds earned this run but not yet cashed out; lost on death,
 	 * banked into DiamondManager only when the player cashes out. */
 	private int pendingDiamonds;
+	/** Score boost popups waiting to be shown (Team CS): {due time, x, y, points, bonus ship 1/0}. */
+	private List<long[]> scoreBoostPopups;
 	/** Item system of this run (Team CS). Kept across levels by ItemSystem. */
 	private ItemSystem items;
 	/** Item slot keys (1-9) held last frame, so holding a key uses it once. */
 	private boolean[] itemSlotKeysHeld = new boolean[9];
+	/** Skin chosen in Customize; animated skins change colour each frame (GoG). */
+	private shop.Skin skin;
 	/** Whether gameplay is currently paused. */
 	private boolean paused;
 	/** Debounces the pause key so holding it doesn't toggle every frame. */
@@ -299,7 +311,11 @@ public class GameScreen extends Screen {
 
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
-		this.ship = new Ship(this.width / 2, this.height - 30);
+		this.ship = new Ship(this.width / 2, this.height - 30,
+				Core.getSelectedShipType());
+		// Skin chosen in Customize (GoG - Currency System).
+		this.skin = PurchaseManager.getInstance().getSelectedSkin();
+		this.ship.setSkinColor(this.skin.getColor());
 		// Appears each 10-30 seconds.
 		this.enemyShipSpecialCooldown = Core.getVariableCooldown(
 				BONUS_SHIP_INTERVAL, BONUS_SHIP_VARIANCE);
@@ -316,6 +332,8 @@ public class GameScreen extends Screen {
 		GameEvents.subscribe(GameEvents.Type.PLAYER_HIT, this.damageDim);
 		this.glitch = new GlitchEffect();
 		this.screenShake = new ScreenShake();
+		this.pointsEffect = new PointsEffect(SEPARATION_LINE_HEIGHT);
+		this.scoreBoostPopups = new ArrayList<long[]>(); // Item System (Team CS)
 		this.coins = new HashSet<Coin>();
 		this.achievementPopupQueue = new LinkedList<Achievement>();
 		this.coinDropManager = new CoinDropManager();
@@ -377,9 +395,14 @@ public class GameScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
-		// Item System (Team CS): item bonuses on top of the base fire rate/bullet speed.
-		this.ship.setItemBonuses(this.items.fireRateBonus(),
-				this.items.bulletSpeedBonus());
+		// Item System (Team CS): item bonuses on top of the base fire rate,
+		// bullet speed and movement speed (stacks and the boost item).
+		this.ship.setItemBonuses(
+				this.items.fireRateBonus(this.ship.getBaseFireRate()),
+				this.items.bulletSpeedBonus(),
+				this.items.movementSpeedBonus(this.ship.getBaseSpeed()));
+		// Animated skins (GoG); plain skins return the same colour.
+		this.ship.setSkinColor(this.skin.colorAt(System.currentTimeMillis()));
 
 		if (inputManager.isKeyDown(KeyEvent.VK_P)
 				&& this.pauseKeyCooldown.checkFinished()) {
@@ -457,6 +480,7 @@ public class GameScreen extends Screen {
 				&& !this.levelFinished && this.lives > 0
 				&& !this.ship.isDestroyed());
 		manageCollisions();
+		showScoreBoostPopups(); // Item System (Team CS)
 		cleanBullets();
 		updateParticles(); // AUTHORED BY: VFX TEAM (Effection)
 		updateCoins();
@@ -485,6 +509,12 @@ public class GameScreen extends Screen {
 				collectRemainingCoins();
 				showUnlockedAchievement(Core.getAchievementManager()
 						.recordLevelCompleted(this.level));
+
+				showUnlockedAchievement(Core.getAchievementManager()
+						.recordLevelCompleted(
+								this.level,
+								Core.getShipId(this.ship.getType()),
+								true));
 
 				// Last level cleared alive: the game is beaten.
 				if (this.level == Core.getNumLevels())
@@ -726,10 +756,12 @@ public class GameScreen extends Screen {
 						this.enemyShipSpecial.getPositionY());
 
 			enemyShipFormation.draw();
-
-			// Hit sparkles. AUTHORED BY: VFX TEAM (Effection)
-			for (Particle particle : this.particles)
-				drawManager.drawParticle(particle);
+      
+		// Hit sparkles: drawn while the shake offset is applied so they move
+		// with the game world, and clipped to the play area so they never
+		// cover the HUD. AUTHORED BY: VFX TEAM (Effection)
+		drawManager.drawParticles(this, this.particles,
+				SEPARATION_LINE_HEIGHT);
 
 			for (Bullet bullet : this.bullets)
 				drawManager.drawEntity(bullet, bullet.getPositionX(),
@@ -749,6 +781,9 @@ public class GameScreen extends Screen {
 			// HUD must stay still: remove shake offset.
 			drawManager.setWorldOffset(0, 0);
 		}
+
+		// Points popups (above the dim, under the HUD). AUTHORED BY: VFX TEAM (Effection)
+		drawManager.drawPointsEffect(this, this.pointsEffect);
 
 		// Interface.
 		drawManager.drawScore(this, this.score);
@@ -812,6 +847,8 @@ public class GameScreen extends Screen {
 
 	/**
 	 * Scatters sparkles from the center of a destroyed ship.
+	 * Must be called BEFORE the ship is destroyed, while its position and
+	 * size are still valid.
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 *
 	 * @param ship
@@ -828,13 +865,18 @@ public class GameScreen extends Screen {
 	}
 
 	/**
-	 * Moves the sparkles and removes the ones that faded away.
+	 * Moves the sparkles and removes the ones that faded away or left the
+	 * play area. Called every frame, outside the levelFinished gate, so
+	 * sparkles keep fading after a level ends instead of piling up.
+	 * Removal happens after the update loop, never during iteration.
 	 * AUTHORED BY: VFX TEAM (Effection)
 	 */
 	private void updateParticles() {
 		for (Particle particle : this.particles)
 			particle.update();
-		this.particles.removeIf(Particle::isDead);
+		this.particles.removeIf(particle -> particle.isDead()
+				|| !particle.isInside(0, SEPARATION_LINE_HEIGHT,
+						this.width, this.height));
 	}
 
 	/**
@@ -874,11 +916,16 @@ public class GameScreen extends Screen {
 				for (EnemyShip enemyShip : this.enemyShipFormation)
 					if (!enemyShip.isDestroyed()
 							&& checkCollision(bullet, enemyShip)) {
-						this.score += enemyShip.getPointValue();
+						this.score += this.items.scoreFor(enemyShip.getPointValue()); // score boost (Team CS)
 						this.shipsDestroyed++;
 						spawnSparkles(enemyShip); // AUTHORED BY: VFX TEAM (Effection)
 						this.enemyShipFormation.destroy(enemyShip);
 						this.screenShake.trigger();
+						// Points popup. AUTHORED BY: VFX TEAM (Effection)
+						this.pointsEffect.spawn(enemyShip.getPositionX() + enemyShip.getWidth() / 2,
+								enemyShip.getPositionY() + enemyShip.getHeight() / 2,
+								enemyShip.getPointValue());
+						queueScoreBoostPopup(enemyShip, false); // Item System (Team CS)
 						maybeDropCoin(enemyShip);
 						this.items.onEnemyDefeated(enemyShip, false);
 						showUnlockedAchievement(Core.getAchievementManager()
@@ -888,11 +935,17 @@ public class GameScreen extends Screen {
 				if (this.enemyShipSpecial != null
 						&& !this.enemyShipSpecial.isDestroyed()
 						&& checkCollision(bullet, this.enemyShipSpecial)) {
-					this.score += this.enemyShipSpecial.getPointValue();
+					this.score += this.items.scoreFor(this.enemyShipSpecial.getPointValue()); // score boost (Team CS)
 					this.shipsDestroyed++;
 					spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
 					this.enemyShipSpecial.destroy();
 					this.screenShake.trigger();
+					// Bonus points popup. AUTHORED BY: VFX TEAM (Effection)
+					this.pointsEffect.spawnBonus(
+						this.enemyShipSpecial.getPositionX() + this.enemyShipSpecial.getWidth() / 2,
+						this.enemyShipSpecial.getPositionY() + this.enemyShipSpecial.getHeight() / 2,
+						this.enemyShipSpecial.getPointValue());
+					queueScoreBoostPopup(this.enemyShipSpecial, true); // Item System (Team CS)
 					dropCoin(this.enemyShipSpecial, BONUS_COIN_VALUE);
 					this.items.onEnemyDefeated(this.enemyShipSpecial, true);
 					showUnlockedAchievement(Core.getAchievementManager()
@@ -986,6 +1039,48 @@ public class GameScreen extends Screen {
 			if (down && !this.itemSlotKeysHeld[slot])
 				this.items.useSlot(slot);
 			this.itemSlotKeysHeld[slot] = down;
+		}
+	}
+
+	/**
+	 * While a score boost is on, the normal points popup shows the base
+	 * points and a second popup with the extra points follows a moment
+	 * later, a little lower (Team CS). The score itself already includes
+	 * the extra points.
+	 *
+	 * @param enemy
+	 *            Enemy that was just destroyed.
+	 * @param bonusShip
+	 *            Whether it is the bonus ship (uses its own popup style).
+	 */
+	private void queueScoreBoostPopup(final EnemyShip enemy,
+			final boolean bonusShip) {
+		int extra = this.items.scoreBonus(enemy.getPointValue());
+		if (extra <= 0)
+			return;
+		this.scoreBoostPopups.add(new long[] {
+				System.currentTimeMillis() + SCORE_BOOST_POPUP_DELAY,
+				enemy.getPositionX() + enemy.getWidth() / 2,
+				enemy.getPositionY() + enemy.getHeight() / 2
+						+ SCORE_BOOST_POPUP_OFFSET_Y, extra,
+				bonusShip ? 1 : 0 });
+	}
+
+	/** Shows the queued score boost popups whose time has come (Team CS). */
+	private void showScoreBoostPopups() {
+		long now = System.currentTimeMillis();
+		Iterator<long[]> iterator = this.scoreBoostPopups.iterator();
+		while (iterator.hasNext()) {
+			long[] popup = iterator.next();
+			if (popup[0] > now)
+				continue;
+			if (popup[4] == 1)
+				this.pointsEffect.spawnBonus((int) popup[1], (int) popup[2],
+						(int) popup[3]);
+			else
+				this.pointsEffect.spawn((int) popup[1], (int) popup[2],
+						(int) popup[3]);
+			iterator.remove();
 		}
 	}
 
