@@ -13,6 +13,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
 import engine.CoinDropManager;
 import engine.Cooldown;
 import engine.Core;
@@ -308,7 +310,8 @@ public class GameScreen extends Screen {
 	 */
 	public final void initialize() {
 		super.initialize();
-
+		SoundManager.getInstance().playBgm(Sound.BGM_GAME);
+		
 		enemyShipFormation = new EnemyShipFormation(this.gameSettings);
 		enemyShipFormation.attach(this);
 		this.ship = new Ship(this.width / 2, this.height - 30,
@@ -536,6 +539,7 @@ public class GameScreen extends Screen {
 	 * Any further inquiries please contact us.
 	 */
 	private void startGameOverSequence() {
+		SoundManager.getInstance().stopBgm();
 		this.levelFinished = true;
 		this.gameOverActive = true;
 
