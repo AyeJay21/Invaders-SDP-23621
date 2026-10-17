@@ -31,9 +31,9 @@ import engine.DrawManager.SpriteType;
 
 /**
  * Manages files used in the application.
- * 
+ *
  * @author <a href="mailto:RobertoIA1987@gmail.com">Roberto Izquierdo Amo</a>
- * 
+ *
  */
 public final class FileManager {
 
@@ -49,6 +49,12 @@ public final class FileManager {
 	private static final String COINS_FILE = "coins";
 	/** Name of the file the player's diamond balance is persisted to. */
 	private static final String DIAMONDS_FILE = "diamonds";
+	/** Default shared font, relative to res/ or src/. */
+	public static final String DEFAULT_FONT = "silkscreen/Silkscreen-Regular.ttf";
+	/** Folder checked for fonts that are not on the classpath. */
+	private static final String SOURCE_FONT_DIR = "src";
+	/** Original game font in res/, used if the default font is missing. */
+	private static final String FALLBACK_FONT = "font.ttf";
 
 	/**
 	 * private constructor.
@@ -59,7 +65,7 @@ public final class FileManager {
 
 	/**
 	 * Returns shared instance of FileManager.
-	 * 
+	 *
 	 * @return Shared instance of FileManager.
 	 */
 	protected static FileManager getInstance() {
@@ -70,80 +76,131 @@ public final class FileManager {
 
 	/**
 	 * Loads sprites from disk.
-	 * 
+	 *
+	 * The graphics file holds the sprites as 0/1 bits, in the same order
+	 * they are added to the sprite map in DrawManager. Lines starting with
+	 * "//" are comments and are skipped, so each sprite can be labelled and
+	 * grouped by team. Comments may contain any text, including digits.
+	 *
 	 * @param spriteMap
 	 *            Mapping of sprite type and empty boolean matrix that will
 	 *            contain the image.
 	 * @throws IOException
-	 *             In case of loading problems.
+	 *             In case of loading problems, or when the graphics file has
+	 *             fewer bits than the registered sprites need.
 	 */
 	public void loadSprite(final Map<SpriteType, boolean[][]> spriteMap)
 			throws IOException {
 		InputStream inputStream = null;
+		BufferedReader reader = null;
+		StringBuilder bits = new StringBuilder();
 
 		try {
 			inputStream = DrawManager.class.getClassLoader()
 					.getResourceAsStream("graphics");
-			char c;
+			if (inputStream == null)
+				throw new IOException("Graphics file not found.");
+			reader = new BufferedReader(new InputStreamReader(inputStream,
+					Charset.forName("UTF-8")));
 
-			// Sprite loading.
-			for (Map.Entry<SpriteType, boolean[][]> sprite : spriteMap
-					.entrySet()) {
-				for (int i = 0; i < sprite.getValue().length; i++)
-					for (int j = 0; j < sprite.getValue()[i].length; j++) {
-						do
-							c = (char) inputStream.read();
-						while (c != '0' && c != '1');
-
-						if (c == '1')
-							sprite.getValue()[i][j] = true;
-						else
-							sprite.getValue()[i][j] = false;
-					}
-				logger.fine("Sprite " + sprite.getKey() + " loaded.");
+			// Keep only the bits, skipping comment lines.
+			String line;
+			while ((line = reader.readLine()) != null) {
+				if (line.trim().startsWith("//"))
+					continue;
+				for (int k = 0; k < line.length(); k++) {
+					char c = line.charAt(k);
+					if (c == '0' || c == '1')
+						bits.append(c);
+				}
 			}
-			if (inputStream != null)
-				inputStream.close();
 		} finally {
-			if (inputStream != null)
+			if (reader != null)
+				reader.close();
+			else if (inputStream != null)
 				inputStream.close();
 		}
+
+		// Sprite loading.
+		int position = 0;
+		for (Map.Entry<SpriteType, boolean[][]> sprite : spriteMap
+				.entrySet()) {
+			boolean[][] image = sprite.getValue();
+			int needed = image.length * image[0].length;
+			if (position + needed > bits.length())
+				throw new IOException("Graphics file ran out of data at sprite "
+						+ sprite.getKey() + ": needs " + needed + " bits, "
+						+ (bits.length() - position) + " left.");
+			for (int i = 0; i < image.length; i++)
+				for (int j = 0; j < image[i].length; j++)
+					image[i][j] = bits.charAt(position++) == '1';
+			logger.fine("Sprite " + sprite.getKey() + " loaded.");
+		}
+
+		if (position < bits.length())
+			logger.warning("Graphics file has " + (bits.length() - position)
+					+ " unused bits. A sprite may be missing from DrawManager.");
 	}
 
 	/**
-	 * Loads a font of a given size.
-	 * 
+	 * Loads the shared game font (Silkscreen by default).
+	 * TESTING: run with -Dgame.font=<path> to try another font
+	 * without changing code.
+	 *
 	 * @param size
 	 *            Point size of the font.
 	 * @return New font.
 	 * @throws IOException
-	 *             In case of loading problems.
+	 *             If neither the chosen font nor the fallback can be read.
 	 * @throws FontFormatException
 	 *             In case of incorrect font format.
 	 */
 	public Font loadFont(final float size) throws IOException,
 			FontFormatException {
-		InputStream inputStream = null;
-		Font font;
-
+		String path = System.getProperty("game.font", DEFAULT_FONT);
 		try {
-			// Font loading.
-			inputStream = FileManager.class.getClassLoader()
-					.getResourceAsStream("font.ttf");
-			font = Font.createFont(Font.TRUETYPE_FONT, inputStream).deriveFont(
-					size);
-		} finally {
-			if (inputStream != null)
-				inputStream.close();
+			return loadFont(path, size);
+		} catch (IOException e) {
+			logger.warning(e.getMessage() + " Using " + FALLBACK_FONT
+					+ " instead.");
+			return loadFont(FALLBACK_FONT, size);
 		}
+	}
 
-		return font;
+	/**
+	 * Loads a font from the classpath, or from src/ if it is not there.
+	 *
+	 * @param resourcePath
+	 *            Path relative to res/ or src/, for example
+	 *            "silkscreen/Silkscreen-Regular.ttf".
+	 * @param size
+	 *            Font size.
+	 * @return Loaded font.
+	 * @throws IOException
+	 *             If the font cannot be found or read.
+	 * @throws FontFormatException
+	 *             In case of incorrect font format.
+	 */
+	public Font loadFont(final String resourcePath, final float size)
+			throws IOException, FontFormatException {
+		InputStream inputStream = FileManager.class.getClassLoader()
+				.getResourceAsStream(resourcePath);
+		if (inputStream == null) {
+			File file = new File(SOURCE_FONT_DIR, resourcePath);
+			if (!file.isFile())
+				throw new IOException("Font not found on classpath or at "
+						+ file.getPath() + ".");
+			inputStream = new FileInputStream(file);
+		}
+		try (InputStream in = inputStream) {
+			return Font.createFont(Font.TRUETYPE_FONT, in).deriveFont(size);
+		}
 	}
 
 	/**
 	 * Returns the application default scores if there is no user high scores
 	 * file.
-	 * 
+	 *
 	 * @return Default high scores.
 	 * @throws IOException
 	 *             In case of loading problems.
@@ -179,7 +236,7 @@ public final class FileManager {
 	/**
 	 * Loads high scores from file, and returns a sorted list of pairs score -
 	 * value.
-	 * 
+	 *
 	 * @return Sorted list of scores - players.
 	 * @throws IOException
 	 *             In case of loading problems.
@@ -232,13 +289,13 @@ public final class FileManager {
 
 	/**
 	 * Saves user high scores to disk.
-	 * 
+	 *
 	 * @param highScores
 	 *            High scores to save.
 	 * @throws IOException
 	 *             In case of loading problems.
 	 */
-	public void saveHighScores(final List<Score> highScores) 
+	public void saveHighScores(final List<Score> highScores)
 			throws IOException {
 		OutputStream outputStream = null;
 		BufferedWriter bufferedWriter = null;
@@ -307,7 +364,13 @@ public final class FileManager {
 					unlockedAchievements.add(achievementId);
 
 			logger.info("Loading player profile.");
-			return new PlayerProfile(totalEnemiesKilled, unlockedAchievements);
+			Set<String> completedShips = new HashSet<String>();
+			String completed = properties.getProperty("level10CompletedShips", "");
+			if (!completed.isEmpty())
+				for (String shipId : completed.split(","))
+					completedShips.add(shipId);
+			return new PlayerProfile(totalEnemiesKilled, unlockedAchievements,
+					completedShips);
 		} finally {
 			if (inputStream != null)
 				inputStream.close();
@@ -334,6 +397,8 @@ public final class FileManager {
 					playerProfile.getTotalEnemiesKilled()));
 			properties.setProperty("unlockedAchievements", joinAchievementIds(
 					playerProfile.getUnlockedAchievements()));
+			properties.setProperty("level10CompletedShips", joinAchievementIds(
+					playerProfile.getLevel10CompletedShips()));
 			properties.store(outputStream, "Space Invaders player profile");
 			logger.info("Saving player profile.");
 		} finally {
@@ -467,7 +532,7 @@ public final class FileManager {
 	 *            Short currency label, used only for log messages.
 	 */
 	private void saveBalance(final String fileName, final int balance,
-			final String label) {
+							 final String label) {
 		BufferedWriter bufferedWriter = null;
 		try {
 			File balanceFile = getSaveFile(fileName);
