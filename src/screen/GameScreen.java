@@ -508,6 +508,8 @@ public class GameScreen extends Screen {
 			// until cashed out (see engine.DiamondManager), and coins still
 			// falling are collected so the last kills' drops aren't lost.
 			if (this.enemyShipFormation.isEmpty() && this.lives > 0) {
+				SoundManager.getInstance().stopBgm();
+				SoundManager.getInstance().playSfx(Sound.VICTORY);
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
 				showUnlockedAchievement(Core.getAchievementManager()
@@ -540,6 +542,7 @@ public class GameScreen extends Screen {
 	 */
 	private void startGameOverSequence() {
 		SoundManager.getInstance().stopBgm();
+		SoundManager.getInstance().playSfx(Sound.GAME_OVER);
 		this.levelFinished = true;
 		this.gameOverActive = true;
 
