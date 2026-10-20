@@ -557,6 +557,8 @@ public class GameScreen extends Screen {
 			// falling are collected so the last kills' drops aren't lost.
 			if (isCleared && this.lives > 0) {
 				this.levelsCompletedRun++; // Sharpshooter tiers (Mantis)
+				SoundManager.getInstance().stopBgm();
+				SoundManager.getInstance().playSfx(Sound.VICTORY);
 				this.pendingDiamonds += this.level;
 				collectRemainingCoins();
 				this.pendingDiamonds += this.meteors.collectRemaining(); // VFX TEAM (Effection): collects remaining diamonds from the meteor and adds them to pending
@@ -594,6 +596,7 @@ public class GameScreen extends Screen {
 	 */
 	private void startGameOverSequence() {
 		SoundManager.getInstance().stopBgm();
+		SoundManager.getInstance().playSfx(Sound.GAME_OVER);
 		this.levelFinished = true;
 		this.gameOverActive = true;
 
