@@ -28,6 +28,7 @@ import engine.PurchaseManager;
 import engine.MeteorManager;
 import engine.ScreenShake;
 import engine.PointsEffect;
+import engine.PlayerSounds;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -973,6 +974,7 @@ if (this.midBoss != null) {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+                        PlayerSounds.playHit(this.lives); // <-- Ajout du son
 						this.tookDamage = true; // Survivor tiers (Mantis)
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
