@@ -6,6 +6,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import engine.EconomyConfig;
+
 /**
  * The Night Market: a few shop entries sold at a discount, changing once a
  * day. The picks come from a random generator seeded with the date, so the
@@ -16,10 +18,13 @@ import java.util.Random;
  */
 public final class NightMarket {
 
-	/** How many entries are on sale each day. */
-	public static final int LISTING_COUNT = 3;
-	/** Discount applied to every listing, in percent. */
-	public static final int DISCOUNT_PERCENT = 30;
+	/** How many entries are on sale each day, from res/economy.properties. */
+	public static final int LISTING_COUNT = EconomyConfig.getInstance()
+			.getNightMarketListingCount();
+	/** Discount applied to every listing, in percent, from
+	 * res/economy.properties. */
+	public static final int DISCOUNT_PERCENT = EconomyConfig.getInstance()
+			.getNightMarketDiscountPercent();
 
 	/**
 	 * Not instantiable.
