@@ -7,6 +7,7 @@ import engine.Cooldown;
 import engine.Core;
 import engine.DrawManager.SpriteType;
 
+
 /**
  * Implements a ship, to be controlled by the player.
  * 

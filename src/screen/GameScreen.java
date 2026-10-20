@@ -13,19 +13,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 
-import engine.CoinDropManager;
-import engine.Cooldown;
-import engine.Core;
-import engine.CurrencyManager;
-import engine.GameSettings;
-import engine.GameState;
-import engine.Achievement;
-import engine.DamageDimEffect;
-import engine.GameEvents;
-import engine.GlitchEffect;
-import engine.PurchaseManager;
-import engine.ScreenShake;
-import engine.PointsEffect;
+import engine.*;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -907,6 +895,7 @@ public class GameScreen extends Screen {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+                        PlayerSounds.playHit(this.lives);
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
 								+ " lives remaining.");
