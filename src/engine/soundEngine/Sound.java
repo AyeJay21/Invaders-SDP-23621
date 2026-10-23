@@ -31,6 +31,20 @@ public enum Sound {
 	COIN_PICKUP("sounds/coin_pickup.wav", Category.SFX),
 	/** Diamond picked up. */
 	DIAMOND_PICKUP("sounds/diamond_pickup.wav", Category.SFX),
+	/** Special item: shield collected or activated. */
+	ITEM_SHIELD("sounds/item_shield.wav", Category.SFX),
+	/** Special item: freeze collected or activated. */
+	ITEM_FREEZE("sounds/item_freeze.wav", Category.SFX),
+	/** Special item: boost collected or activated. */
+	ITEM_BOOST("sounds/item_boost.wav", Category.SFX),
+	/** Special item: score boost collected or activated. */
+	ITEM_SCORE_BOOST("sounds/item_score_boost.wav", Category.SFX),
+	/** Special item: extra life collected. */
+	ITEM_LIFE("sounds/item_life.wav", Category.SFX),
+	/** Special item: rapid fire collected. */
+	ITEM_RAPID_FIRE("sounds/item_rapid_fire.wav", Category.SFX),
+	/** Special item: bullet speed collected. */
+	ITEM_BULLET_SPEED("sounds/item_bullet_speed.wav", Category.SFX),
 	/** Item bought in the shop. */
 	PURCHASE("sounds/purchase.wav", Category.SFX),
 	/** Cursor moved to another menu entry. */

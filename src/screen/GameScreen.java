@@ -29,6 +29,7 @@ import engine.MeteorManager;
 import engine.ScreenShake;
 import engine.PointsEffect;
 import engine.PlayerSounds;
+import engine.soundEngine.ItemSounds;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -42,6 +43,8 @@ import entity.Entity;
 import entity.Particle;
 import entity.Ship;
 import item.ItemSystem;
+import item.ItemAPI.EventType;
+import item.ItemAPI.ItemEvent;
 
 /**
  * Implements the game screen, where the action happens.
@@ -1206,7 +1209,11 @@ if (this.midBoss != null) {
 	 * item system logs them itself; sound and effects can hook in here.
 	 */
 	private void handleItemEvents() {
-		this.items.drainEvents();
+		for (ItemEvent event : this.items.drainEvents()) {
+			if (event.type == EventType.ITEM_COLLECTED
+					|| event.type == EventType.ITEM_USED)
+				ItemSounds.play(event.itemId);
+		}
 	}
 
 	/**
