@@ -1097,8 +1097,10 @@ public class GameScreen extends Screen {
 								&& checkCollision(bullet, enemyShip)) {
 							recyclable.add(bullet);
 							// Surviving hits consume the bullet without awarding kill rewards.
-							if (!enemyShip.takeDamage(1))
+							if (!enemyShip.takeDamage(1)) {
+								SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
 								continue;
+							}
 							this.score += this.items.scoreFor(enemyShip.getPointValue());
 							this.shipsDestroyed++;
 							spawnSparkles(enemyShip);
