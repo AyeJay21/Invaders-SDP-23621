@@ -28,6 +28,10 @@ import engine.PurchaseManager;
 import engine.MeteorManager;
 import engine.ScreenShake;
 import engine.PointsEffect;
+import engine.PlayerSounds;
+import engine.soundEngine.ItemSounds;
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -41,6 +45,8 @@ import entity.Entity;
 import entity.Particle;
 import entity.Ship;
 import item.ItemSystem;
+import item.ItemAPI.EventType;
+import item.ItemAPI.ItemEvent;
 
 /**
  * Implements the game screen, where the action happens.
@@ -973,6 +979,7 @@ if (this.midBoss != null) {
 							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
 						this.ship.destroy();
 						this.lives--;
+                        PlayerSounds.playHit(this.lives); // <-- Ajout du son
 						this.tookDamage = true; // Survivor tiers (Mantis)
 						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
 						this.logger.info("Hit on player ship, " + this.lives
@@ -985,14 +992,18 @@ if (this.midBoss != null) {
 							&& !this.midBoss.isDestroyed()
 							&& checkCollision(bullet, (Entity) this.midBoss)) {
 						this.score += this.midBoss.manageCollisionsBoss(bullet);
-						if (this.midBoss.isDestroyed()) {
-							this.shipsDestroyed++;
-							this.screenShake.trigger();
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordBossDefeated());
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordEnemyDefeated());
-						}
+                        if (this.midBoss.isDestroyed()) {
+                            this.shipsDestroyed++;
+                            this.screenShake.trigger();
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordBossDefeated());
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordEnemyDefeated());
+                        } else {
+                            // Boss make sounds when taking damage, but not when destroyed (the explosion sound is played above).
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
+                        }
 						recyclable.add(bullet);
 					}
 				} else {
@@ -1003,6 +1014,7 @@ if (this.midBoss != null) {
 							this.shipsDestroyed++;
 							spawnSparkles(enemyShip);
 							this.enemyShipFormation.destroy(enemyShip);
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
 							this.screenShake.trigger();
 							this.pointsEffect.spawn(
 									enemyShip.getPositionX() + enemyShip.getWidth() / 2,
@@ -1024,6 +1036,7 @@ if (this.midBoss != null) {
 					this.shipsDestroyed++;
 					spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
 					this.enemyShipSpecial.destroy();
+                    SoundManager.getInstance().playSfx(Sound.SPECIAL_ENEMY_HIT);
 					this.screenShake.trigger();
 					// Bonus points popup. AUTHORED BY: VFX TEAM (Effection)
 					this.pointsEffect.spawnBonus(
@@ -1204,7 +1217,11 @@ if (this.midBoss != null) {
 	 * item system logs them itself; sound and effects can hook in here.
 	 */
 	private void handleItemEvents() {
-		this.items.drainEvents();
+		for (ItemEvent event : this.items.drainEvents()) {
+			if (event.type == EventType.ITEM_COLLECTED
+					|| event.type == EventType.ITEM_USED)
+				ItemSounds.play(event.itemId);
+		}
 	}
 
 	/**

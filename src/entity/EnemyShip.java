@@ -144,10 +144,13 @@ public class EnemyShip extends Entity {
 	/**
 	 * Destroys the ship, causing an explosion.
 	 */
-	public final void destroy() {
-		this.isDestroyed = true;
-		this.spriteType = SpriteType.Explosion;
-		this.destroyedAt = System.currentTimeMillis();
+public final void destroy() {
+		if (!this.isDestroyed) {
+			this.isDestroyed = true;
+			this.spriteType = SpriteType.Explosion;
+			this.destroyedAt = System.currentTimeMillis();
+
+		}
 	}
 	
 	/** Opacity: 1 = visible, 0 = invisible. Flickers first, then fades. */
@@ -166,12 +169,12 @@ public class EnemyShip extends Entity {
 	/** True when the flicker + fade animation is over. */
 	public final boolean isFadeFinished() {
 		return this.isDestroyed && System.currentTimeMillis()
-            - this.destroyedAt >= FLICKER_TIME + FADE_TIME;
+			- this.destroyedAt >= FLICKER_TIME + FADE_TIME;
 	}
 
 	/**
 	 * Checks if the ship has been destroyed.
-	 * 
+	 *
 	 * @return True if the ship has been destroyed.
 	 */
 	public final boolean isDestroyed() {
