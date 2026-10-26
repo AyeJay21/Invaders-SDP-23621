@@ -5,8 +5,6 @@ import java.awt.Color;
 import engine.Cooldown;
 import engine.Core;
 import engine.DrawManager.SpriteType;
-import engine.soundEngine.Sound;
-import engine.soundEngine.SoundManager;
 
 /**
  * Implements a enemy ship, to be destroyed by the player.
@@ -151,7 +149,7 @@ public final void destroy() {
 			this.isDestroyed = true;
 			this.spriteType = SpriteType.Explosion;
 			this.destroyedAt = System.currentTimeMillis();
-			SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
+
 		}
 	}
 	

@@ -30,6 +30,8 @@ import engine.ScreenShake;
 import engine.PointsEffect;
 import engine.PlayerSounds;
 import engine.soundEngine.ItemSounds;
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -990,14 +992,18 @@ if (this.midBoss != null) {
 							&& !this.midBoss.isDestroyed()
 							&& checkCollision(bullet, (Entity) this.midBoss)) {
 						this.score += this.midBoss.manageCollisionsBoss(bullet);
-						if (this.midBoss.isDestroyed()) {
-							this.shipsDestroyed++;
-							this.screenShake.trigger();
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordBossDefeated());
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordEnemyDefeated());
-						}
+                        if (this.midBoss.isDestroyed()) {
+                            this.shipsDestroyed++;
+                            this.screenShake.trigger();
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordBossDefeated());
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordEnemyDefeated());
+                        } else {
+                            // Boss make sounds when taking damage, but not when destroyed (the explosion sound is played above).
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
+                        }
 						recyclable.add(bullet);
 					}
 				} else {
@@ -1008,6 +1014,7 @@ if (this.midBoss != null) {
 							this.shipsDestroyed++;
 							spawnSparkles(enemyShip);
 							this.enemyShipFormation.destroy(enemyShip);
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
 							this.screenShake.trigger();
 							this.pointsEffect.spawn(
 									enemyShip.getPositionX() + enemyShip.getWidth() / 2,
@@ -1029,6 +1036,7 @@ if (this.midBoss != null) {
 					this.shipsDestroyed++;
 					spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
 					this.enemyShipSpecial.destroy();
+                    SoundManager.getInstance().playSfx(Sound.SPECIAL_ENEMY_HIT);
 					this.screenShake.trigger();
 					// Bonus points popup. AUTHORED BY: VFX TEAM (Effection)
 					this.pointsEffect.spawnBonus(
