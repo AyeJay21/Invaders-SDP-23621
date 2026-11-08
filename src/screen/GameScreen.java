@@ -1366,6 +1366,9 @@ public class GameScreen extends Screen {
 		if (!this.achievementPopupQueue.isEmpty()) {
 			this.unlockedAchievement = this.achievementPopupQueue.remove();
 			this.achievementPopupStartedAt = System.currentTimeMillis();
+			// Played here and not on unlock, so several achievements unlocked
+			// at once still get one jingle per popup instead of overlapping.
+			SoundManager.getInstance().playSfx(Sound.ACHIEVEMENT);
 		}
 	}
 
