@@ -12,6 +12,8 @@ import engine.DiamondManager;
 import engine.DrawManager.SpriteType;
 import engine.PurchaseManager;
 import engine.PurchaseManager.PurchaseResult;
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
 import entity.Ship.ShipType;
 import item.ItemAPI;
 import item.ItemSystem;
@@ -353,6 +355,9 @@ public class ShopScreen extends Screen {
 				entry.discounted);
 		switch (result) {
 			case SUCCESS:
+				// Only on success, so a rejected purchase still sounds like a
+				// plain menu click.
+				SoundManager.getInstance().playSfx(Sound.PURCHASE);
 				showMessage((item.isRepeatable() ? item.getName() + " is now"
 								+ " level " + purchases.getQuantity(item) + "! "
 								: "Bought " + item.getName() + "! ") + afterBuying(item),
