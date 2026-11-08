@@ -27,7 +27,7 @@ public enum Sound {
     PLAYER_DAMAGE("sounds/player_damage.wav", Category.SFX),
     /** Player ship destroyed (game over). */
 	PLAYER_EXPLOSION("sounds/player_death.wav", Category.SFX),
-    /** Player ship damaged. */
+    /** Coin picked up. */
 	COIN_PICKUP("sounds/coin_pickup.wav", Category.SFX),
 	/** Diamond picked up. */
 	DIAMOND_PICKUP("sounds/diamond_pickup.wav", Category.SFX),
