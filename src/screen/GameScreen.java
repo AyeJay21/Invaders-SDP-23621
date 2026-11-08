@@ -1207,6 +1207,7 @@ public class GameScreen extends Screen {
 			if (this.lives > 0 && !this.ship.isDestroyed()
 					&& checkCollision(coin, this.ship)) {
 				CurrencyManager.getInstance().addCoins(coin.getValue());
+				SoundManager.getInstance().playSfx(Sound.COIN_PICKUP);
 				this.coinsCollectedThisLevel += coin.getValue();
 				this.coinsCollected += coin.getValue();
 				recyclable.add(coin);
