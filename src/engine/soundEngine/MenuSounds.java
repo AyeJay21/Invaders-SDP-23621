@@ -22,4 +22,15 @@ public final class MenuSounds {
         lastPlayed = now;
         SoundManager.getInstance().playSfx(Sound.MENU_MOVE);
     }
+
+    /**
+     * Plays the sound heard when a menu entry is confirmed. Every way of
+     * confirming - a key or a mouse click - goes through the same call, so it
+     * plays once per confirmation. No throttle is needed here, because the
+     * screens only confirm on a fresh key press or click, never while a key
+     * is held.
+     */
+    public static void playSelect() {
+        SoundManager.getInstance().playSfx(Sound.MENU_SELECT);
+    }
 }

@@ -224,6 +224,8 @@ public class TitleScreen extends Screen {
 	 * Enter or a mouse click - goes through here.
 	 */
 	private void answerExitConfirm() {
+		MenuSounds.playSelect();
+
 		if (this.exitConfirmYes) {
 			this.returnCode = MenuItem.EXIT.getCode();
 			this.isRunning = false;
@@ -262,6 +264,8 @@ public class TitleScreen extends Screen {
 	private void confirm() {
 		if (!this.selected.isEnabled())
 			return;
+
+		MenuSounds.playSelect();
 
 		if (this.selected == MenuItem.EXIT) {
 			openExitConfirm();

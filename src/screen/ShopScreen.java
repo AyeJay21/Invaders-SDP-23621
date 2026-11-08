@@ -12,6 +12,7 @@ import engine.DiamondManager;
 import engine.DrawManager.SpriteType;
 import engine.PurchaseManager;
 import engine.PurchaseManager.PurchaseResult;
+import engine.soundEngine.MenuSounds;
 import entity.Ship.ShipType;
 import item.ItemAPI;
 import item.ItemSystem;
@@ -341,6 +342,9 @@ public class ShopScreen extends Screen {
 	private void buySelected(final Currency chosen) {
 		if (this.entries.isEmpty())
 			return;
+
+		MenuSounds.playSelect();
+
 		Entry entry = this.entries.get(this.selected);
 		ShopItem item = entry.item;
 		Currency currency = chosen;

@@ -9,6 +9,7 @@ import java.util.List;
 import engine.Core;
 import engine.DrawManager.SpriteType;
 import engine.PurchaseManager;
+import engine.soundEngine.MenuSounds;
 import entity.Ship.ShipType;
 import shop.Currency;
 import shop.ShopCatalog;
@@ -302,8 +303,10 @@ public class ShipSelectScreen extends Screen {
 	/** Switches the browsed upgrade on or off, if it is owned. */
 	private void toggleUpgrade() {
 		ShopItem upgrade = browsedUpgrade();
-		if (upgrade != null && PurchaseManager.getInstance().isOwned(upgrade))
+		if (upgrade != null && PurchaseManager.getInstance().isOwned(upgrade)) {
+			MenuSounds.playSelect();
 			PurchaseManager.getInstance().toggleUpgrade(upgrade.getRef());
+		}
 	}
 
 	/**
