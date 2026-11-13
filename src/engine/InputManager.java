@@ -7,6 +7,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
+import engine.soundEngine.SoundManager;
+
 /**
  * Manages keyboard and mouse input for the provided screen.
  * 
@@ -69,8 +71,25 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 	 */
 	@Override
 	public void keyPressed(final KeyEvent key) {
-		if (key.getKeyCode() >= 0 && key.getKeyCode() < NUM_KEYS)
-			keys[key.getKeyCode()] = true;
+		final int code = key.getKeyCode();
+		if (code < 0 || code >= NUM_KEYS)
+			return;
+		// Auto-repeat fires keyPressed again while a key is held, so only the
+		// first event counts as a real press.
+		if (keys[code])
+			return;
+		keys[code] = true;
+		if (code == KeyEvent.VK_M)
+			toggleMute();
+	}
+
+	/**
+	 * Mutes or unmutes all audio. Bound to the M key on every screen, because
+	 * this manager is the only key listener attached to the frame.
+	 */
+	private static void toggleMute() {
+		final SoundManager sound = SoundManager.getInstance();
+		sound.setMuted(!sound.isMuted());
 	}
 
 	/**
