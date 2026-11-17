@@ -1477,6 +1477,35 @@ public final class DrawManager {
 		}
 	}
 
+	public void drawPlayerNameInput(final Screen screen, final char[] name,
+									final int nameCharSelected,
+									final String prompt) {
+		backBufferGraphics.setColor(Color.WHITE);
+		drawCenteredRegularString(screen, prompt, screen.getHeight() / 3);
+
+		backBufferGraphics.setFont(fontBig);
+		int cell = fontBigMetrics.charWidth('W') * 2;
+		int startX = screen.getWidth() / 2 - cell * name.length / 2;
+		for (int i = 0; i < name.length; i++) {
+			backBufferGraphics.setColor(
+					i == nameCharSelected ? Color.GREEN : Color.WHITE);
+			backBufferGraphics.drawString(Character.toString(name[i]),
+					startX + i * cell
+							+ (cell - fontBigMetrics.charWidth(name[i])) / 2,
+					screen.getHeight() / 2);
+		}
+	}
+
+	public void drawNewRecordBanner(final Screen screen,
+									final String playerName) {
+		backBufferGraphics.setColor(Color.GREEN);
+		drawCenteredRegularString(screen, "New Record!", screen.getHeight()
+				/ 4 + fontRegularMetrics.getHeight() * 10);
+		backBufferGraphics.setColor(Color.WHITE);
+		drawCenteredRegularString(screen, "Saved as " + playerName,
+				screen.getHeight() / 4 + fontRegularMetrics.getHeight() * 12);
+	}
+
 	/**
 	 * Draws basic content of game over screen.
 	 *

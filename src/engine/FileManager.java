@@ -49,6 +49,8 @@ public final class FileManager {
 	private static final String COINS_FILE = "coins";
 	/** Name of the file the player's diamond balance is persisted to. */
 	private static final String DIAMONDS_FILE = "diamonds";
+	/** Name of the file holding the name of the last player. */
+	private static final String LAST_PLAYER_FILE = "last-player";
 	/** Default shared font, relative to res/ or src/. */
 	public static final String DEFAULT_FONT = "silkscreen/Silkscreen-Regular.ttf";
 	/** Folder checked for fonts that are not on the classpath. */
@@ -207,26 +209,22 @@ public final class FileManager {
 	 */
 	private List<Score> loadDefaultHighScores() throws IOException {
 		List<Score> highScores = new ArrayList<Score>();
-		InputStream inputStream = null;
+		InputStream inputStream = FileManager.class.getClassLoader()
+				.getResourceAsStream("scores");
+		if (inputStream == null) {
+			logger.warning("Default high scores file not found.");
+			return highScores;
+		}
+
 		BufferedReader reader = null;
-
 		try {
-			inputStream = FileManager.class.getClassLoader()
-					.getResourceAsStream("scores");
-			reader = new BufferedReader(new InputStreamReader(inputStream));
-
-			Score highScore = null;
-			String name = reader.readLine();
-			String score = reader.readLine();
-
-			while ((name != null) && (score != null)) {
-				highScore = new Score(name, Integer.parseInt(score));
-				highScores.add(highScore);
-				name = reader.readLine();
-				score = reader.readLine();
-			}
+			reader = new BufferedReader(new InputStreamReader(inputStream,
+					Charset.forName("UTF-8")));
+			readScores(reader, highScores);
 		} finally {
-			if (inputStream != null)
+			if (reader != null)
+				reader.close();
+			else
 				inputStream.close();
 		}
 
@@ -263,16 +261,7 @@ public final class FileManager {
 
 			logger.info("Loading user high scores.");
 
-			Score highScore = null;
-			String name = bufferedReader.readLine();
-			String score = bufferedReader.readLine();
-
-			while ((name != null) && (score != null)) {
-				highScore = new Score(name, Integer.parseInt(score));
-				highScores.add(highScore);
-				name = bufferedReader.readLine();
-				score = bufferedReader.readLine();
-			}
+			readScores(bufferedReader, highScores);
 
 		} catch (FileNotFoundException e) {
 			// loads default if there's no user scores.
@@ -297,26 +286,13 @@ public final class FileManager {
 	 */
 	public void saveHighScores(final List<Score> highScores)
 			throws IOException {
-		OutputStream outputStream = null;
+		File scoresFile = getSaveFile("scores");
+		File tempFile = getSaveFile("scores.tmp");
 		BufferedWriter bufferedWriter = null;
 
 		try {
-			String jarPath = FileManager.class.getProtectionDomain()
-					.getCodeSource().getLocation().getPath();
-			jarPath = URLDecoder.decode(jarPath, "UTF-8");
-
-			String scoresPath = new File(jarPath).getParent();
-			scoresPath += File.separator;
-			scoresPath += "scores";
-
-			File scoresFile = new File(scoresPath);
-
-			if (!scoresFile.exists())
-				scoresFile.createNewFile();
-
-			outputStream = new FileOutputStream(scoresFile);
 			bufferedWriter = new BufferedWriter(new OutputStreamWriter(
-					outputStream, Charset.forName("UTF-8")));
+					new FileOutputStream(tempFile), Charset.forName("UTF-8")));
 
 			logger.info("Saving user high scores.");
 
@@ -331,7 +307,10 @@ public final class FileManager {
 				bufferedWriter.newLine();
 				savedCount++;
 			}
+			bufferedWriter.close();
+			bufferedWriter = null;
 
+			moveReplacing(tempFile, scoresFile);
 		} finally {
 			if (bufferedWriter != null)
 				bufferedWriter.close();
@@ -563,6 +542,118 @@ public final class FileManager {
 		} catch (IOException e) {
 			logger.warning("Couldn't save " + label + " balance: "
 					+ e.getMessage());
+		} finally {
+			try {
+				if (bufferedWriter != null)
+					bufferedWriter.close();
+			} catch (IOException e) {
+				// Nothing else to do if closing fails.
+			}
+		}
+	}
+
+	/**
+	 * Reads name/score pairs. A corrupt entry is skipped instead of
+	 * stopping the game.
+	 *
+	 * @param reader
+	 *            Reader positioned at the first name line.
+	 * @param highScores
+	 *            List that receives the scores read.
+	 * @throws IOException
+	 *             In case of reading problems.
+	 */
+	private void readScores(final BufferedReader reader,
+							final List<Score> highScores) throws IOException {
+		String name = reader.readLine();
+		String score = reader.readLine();
+
+		while (name != null && score != null) {
+			try {
+				highScores.add(new Score(name, Integer.parseInt(score.trim())));
+			} catch (NumberFormatException e) {
+				logger.warning("Skipping corrupt high score entry: " + name);
+			}
+			name = reader.readLine();
+			score = reader.readLine();
+		}
+	}
+
+	/**
+	 * Replaces a file, atomically when the system allows it.
+	 *
+	 * @param from
+	 *            Temporary file with the new content.
+	 * @param to
+	 *            File to replace.
+	 * @throws IOException
+	 *             If the file cannot be replaced.
+	 */
+	private void moveReplacing(final File from, final File to)
+			throws IOException {
+		try {
+			Files.move(from.toPath(), to.toPath(),
+					StandardCopyOption.REPLACE_EXISTING,
+					StandardCopyOption.ATOMIC_MOVE);
+		} catch (AtomicMoveNotSupportedException e) {
+			Files.move(from.toPath(), to.toPath(),
+					StandardCopyOption.REPLACE_EXISTING);
+		}
+	}
+
+	/**
+	 * Loads the name of the last player.
+	 *
+	 * @return Saved name, or null if there is none or it is invalid.
+	 */
+	public String loadLastPlayer() {
+		BufferedReader bufferedReader = null;
+		try {
+			File file = getSaveFile(LAST_PLAYER_FILE);
+			if (!file.exists())
+				return null;
+			bufferedReader = new BufferedReader(new InputStreamReader(
+					new FileInputStream(file), Charset.forName("UTF-8")));
+			String name = PlayerSession.normalize(bufferedReader.readLine());
+			return PlayerSession.isValidName(name) ? name : null;
+		} catch (IOException e) {
+			logger.warning("Couldn't load last player: " + e.getMessage());
+			return null;
+		} finally {
+			try {
+				if (bufferedReader != null)
+					bufferedReader.close();
+			} catch (IOException e) {
+				// Nothing else to do if closing fails.
+			}
+		}
+	}
+
+	/**
+	 * Saves the name of the last player. Never throws: a failed save is
+	 * logged and the game keeps running.
+	 *
+	 * @param name
+	 *            Player name, three letters.
+	 */
+	public void saveLastPlayer(final String name) {
+		if (!PlayerSession.isValidName(name)) {
+			logger.warning("Not saving invalid player name.");
+			return;
+		}
+		BufferedWriter bufferedWriter = null;
+		try {
+			File file = getSaveFile(LAST_PLAYER_FILE);
+			File tempFile = getSaveFile(LAST_PLAYER_FILE + ".tmp");
+			bufferedWriter = new BufferedWriter(new OutputStreamWriter(
+					new FileOutputStream(tempFile), Charset.forName("UTF-8")));
+			bufferedWriter.write(name);
+			bufferedWriter.newLine();
+			bufferedWriter.close();
+			bufferedWriter = null;
+			moveReplacing(tempFile, file);
+		} catch (IOException e) {
+			logger.warning("Couldn't save last player: " + e.getMessage());
 		} finally {
 			try {
 				if (bufferedWriter != null)
