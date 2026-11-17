@@ -183,7 +183,6 @@ public class EnemyShip extends Entity {
 			this.isDestroyed = true;
 			this.spriteType = SpriteType.Explosion;
 			this.destroyedAt = System.currentTimeMillis();
-			SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
 		}
 	}
 	

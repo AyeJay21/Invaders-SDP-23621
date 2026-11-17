@@ -31,7 +31,7 @@ import engine.PurchaseManager;
 import engine.MeteorManager;
 import engine.ScreenShake;
 import engine.PointsEffect;
-import engine.PlayerSounds;
+import engine.soundEngine.PlayerSounds;
 import engine.soundEngine.ItemSounds;
 import entity.Bullet;
 import entity.BulletPool;
@@ -1058,101 +1058,111 @@ public class GameScreen extends Screen {
 	/**
 	 * Manages collisions between bullets and ships.
 	 */
-	private void manageCollisions() {
-		Set<Bullet> recyclable = new HashSet<Bullet>();
-		for (Bullet bullet : this.bullets) {
-			if (bullet.getSpeed() > 0) {
-				if (checkCollision(bullet, this.ship) && !this.levelFinished) {
-					recyclable.add(bullet);
-					if (!this.ship.isDestroyed()
-							&& !this.items.tryBlockHit()) { // Shield item (Team CS)
-						this.ship.destroy();
-						this.lives--;
+    /**
+     * Manages collisions between bullets and ships.
+     */
+    private void manageCollisions() {
+        Set<Bullet> recyclable = new HashSet<Bullet>();
+        for (Bullet bullet : this.bullets) {
+            if (bullet.getSpeed() > 0) {
+                if (checkCollision(bullet, this.ship) && !this.levelFinished) {
+                    recyclable.add(bullet);
+                    if (!this.ship.isDestroyed()
+                            && !this.items.tryBlockHit()) { // Shield item (Team CS)
+                        this.ship.destroy();
+                        this.lives--;
                         PlayerSounds.playHit(this.lives); // <-- Ajout du son
-						this.tookDamage = true; // Survivor tiers (Mantis)
-						GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
-						this.logger.info("Hit on player ship, " + this.lives
-								+ " lives remaining.");
-					}
-				}
-			} else {
-				if (this.level == 5 || this.level == 10) {
-					if (this.midBoss != null
-							&& !this.midBoss.isDestroyed()
-							&& checkCollision(bullet, (Entity) this.midBoss)) {
-						this.score += this.midBoss.manageCollisionsBoss(bullet);
-						if (this.midBoss.isDestroyed()) {
-							this.shipsDestroyed++;
-							this.screenShake.trigger();
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordBossDefeated());
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordEnemyDefeated());
-						}
-						recyclable.add(bullet);
-					}
-				} else {
-					for (EnemyShip enemyShip : this.enemyShipFormation) {
-						if (!enemyShip.isDestroyed()
-								&& checkCollision(bullet, enemyShip)) {
-							recyclable.add(bullet);
-							// Surviving hits consume the bullet without awarding kill rewards.
-							if (!enemyShip.takeDamage(1)) {
-								SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
-								continue;
-							}
-							this.score += this.items.scoreFor(enemyShip.getPointValue());
-							this.shipsDestroyed++;
-							spawnSparkles(enemyShip);
-							this.enemyShipFormation.destroy(enemyShip);
-							if (this.lightningOn) // Lightning Chain. AUTHORED BY: VFX TEAM (Effection)
-								this.lightningChain.onKill(
-										enemyShip.getPositionX() + enemyShip.getWidth() / 2,
-										enemyShip.getPositionY() + enemyShip.getHeight() / 2,
-										aliveEnemyCenters());
-							this.screenShake.trigger();
-							this.pointsEffect.spawn(
-									enemyShip.getPositionX() + enemyShip.getWidth() / 2,
-									enemyShip.getPositionY() + enemyShip.getHeight() / 2,
-									enemyShip.getPointValue());
-							queueScoreBoostPopup(enemyShip, false); // Item System (Team CS)
-							maybeDropCoin(enemyShip);
-							this.items.onEnemyDefeated(enemyShip, false);
-							showUnlockedAchievement(Core.getAchievementManager()
-									.recordEnemyDefeated());
-							recyclable.add(bullet);
-						}
-					}
-				}
-				if (this.enemyShipSpecial != null
-						&& !this.enemyShipSpecial.isDestroyed()
-						&& checkCollision(bullet, this.enemyShipSpecial)) {
-					this.score += this.items.scoreFor(this.enemyShipSpecial.getPointValue()); // score boost (Team CS)
-					this.shipsDestroyed++;
-					spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
-					this.enemyShipSpecial.destroy();
-					this.screenShake.trigger();
-					// Bonus points popup. AUTHORED BY: VFX TEAM (Effection)
-					this.pointsEffect.spawnBonus(
-							this.enemyShipSpecial.getPositionX() + this.enemyShipSpecial.getWidth() / 2,
-							this.enemyShipSpecial.getPositionY() + this.enemyShipSpecial.getHeight() / 2,
-							this.enemyShipSpecial.getPointValue());
-					queueScoreBoostPopup(this.enemyShipSpecial, true); // Item System (Team CS)
-					dropCoin(this.enemyShipSpecial, BONUS_COIN_VALUE);
-					this.items.onEnemyDefeated(this.enemyShipSpecial, true);
-					showUnlockedAchievement(Core.getAchievementManager()
-							.recordEnemyDefeated());
-					this.enemyShipSpecialExplosionCooldown.reset();
-					recyclable.add(bullet);
-				}
-				// Bonus meteor: only player bullets hit it. VFX TEAM (Effection)
-				if (!recyclable.contains(bullet) && this.meteors.tryHit(bullet))
-					recyclable.add(bullet);
-			}
-		}
-		this.bullets.removeAll(recyclable);
-		BulletPool.recycle(recyclable);
-	}
+                        this.tookDamage = true; // Survivor tiers (Mantis)
+                        GameEvents.emit(GameEvents.Type.PLAYER_HIT, this.lives); // AUTHORED BY: VFX TEAM (Effection)
+                        this.logger.info("Hit on player ship, " + this.lives
+                                + " lives remaining.");
+                    }
+                }
+            } else {
+                if (this.level == 5 || this.level == 10) {
+                    if (this.midBoss != null
+                            && !this.midBoss.isDestroyed()
+                            && checkCollision(bullet, (Entity) this.midBoss)) {
+                        this.score += this.midBoss.manageCollisionsBoss(bullet);
+                        if (this.midBoss.isDestroyed()) {
+                            this.shipsDestroyed++;
+                            this.screenShake.trigger();
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordBossDefeated());
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordEnemyDefeated());
+                        } else {
+                            // Boss make sounds when taking damage, but not when destroyed (the explosion sound is played above).
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
+                        }
+                        recyclable.add(bullet);
+                    }
+                } else {
+                    for (EnemyShip enemyShip : this.enemyShipFormation) {
+                        if (!enemyShip.isDestroyed()
+                                && checkCollision(bullet, enemyShip)) {
+                            recyclable.add(bullet);
+                            // Surviving hits consume the bullet without awarding kill rewards.
+                            if (!enemyShip.takeDamage(1)) {
+                                SoundManager.getInstance().playSfx(Sound.ENEMY_HIT);
+                                continue;
+                            }
+                            this.score += this.items.scoreFor(enemyShip.getPointValue());
+                            this.shipsDestroyed++;
+                            spawnSparkles(enemyShip);
+                            this.enemyShipFormation.destroy(enemyShip);
+                            SoundManager.getInstance().playSfx(Sound.ENEMY_EXPLOSION);
+                            if (this.lightningOn) // Lightning Chain. AUTHORED BY: VFX TEAM (Effection)
+                                this.lightningChain.onKill(
+                                        enemyShip.getPositionX() + enemyShip.getWidth() / 2,
+                                        enemyShip.getPositionY() + enemyShip.getHeight() / 2,
+                                        aliveEnemyCenters());
+                            this.screenShake.trigger();
+                            this.pointsEffect.spawn(
+                                    enemyShip.getPositionX() + enemyShip.getWidth() / 2,
+                                    enemyShip.getPositionY() + enemyShip.getHeight() / 2,
+                                    enemyShip.getPointValue());
+                            queueScoreBoostPopup(enemyShip, false); // Item System (Team CS)
+                            maybeDropCoin(enemyShip);
+                            this.items.onEnemyDefeated(enemyShip, false);
+                            showUnlockedAchievement(Core.getAchievementManager()
+                                    .recordEnemyDefeated());
+                            recyclable.add(bullet);
+                        }
+                    }
+                }
+                if (this.enemyShipSpecial != null
+                        && !this.enemyShipSpecial.isDestroyed()
+                        && checkCollision(bullet, this.enemyShipSpecial)) {
+                    this.score += this.items.scoreFor(this.enemyShipSpecial.getPointValue()); // score boost (Team CS)
+                    this.shipsDestroyed++;
+                    spawnSparkles(this.enemyShipSpecial); // AUTHORED BY: VFX TEAM (Effection)
+                    this.enemyShipSpecial.destroy();
+                    SoundManager.getInstance().playSfx(Sound.SPECIAL_ENEMY_HIT);
+                    this.screenShake.trigger();
+                    // Bonus points popup. AUTHORED BY: VFX TEAM (Effection)
+                    this.pointsEffect.spawnBonus(
+                            this.enemyShipSpecial.getPositionX() + this.enemyShipSpecial.getWidth() / 2,
+                            this.enemyShipSpecial.getPositionY() + this.enemyShipSpecial.getHeight() / 2,
+                            this.enemyShipSpecial.getPointValue());
+                    queueScoreBoostPopup(this.enemyShipSpecial, true); // Item System (Team CS)
+                    dropCoin(this.enemyShipSpecial, BONUS_COIN_VALUE);
+                    this.items.onEnemyDefeated(this.enemyShipSpecial, true);
+                    showUnlockedAchievement(Core.getAchievementManager()
+                            .recordEnemyDefeated());
+                    this.enemyShipSpecialExplosionCooldown.reset();
+                    recyclable.add(bullet);
+                }
+                // Bonus meteor: only player bullets hit it. VFX TEAM (Effection)
+                if (!recyclable.contains(bullet) && this.meteors.tryHit(bullet))
+                    recyclable.add(bullet);
+            }
+        }
+        this.bullets.removeAll(recyclable);
+        BulletPool.recycle(recyclable);
+    }
+
 
 	/**
 	 * @return Centers of all enemies that are still alive.

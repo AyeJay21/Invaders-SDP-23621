@@ -23,6 +23,8 @@ public enum Sound {
     ENEMY_HIT("sounds/enemy_hit.wav", Category.SFX),
     /** Enemy ship destroyed. */
 	ENEMY_EXPLOSION("sounds/enemy_explosion.wav", Category.SFX),
+    /** Special enemy ship hit. */
+    SPECIAL_ENEMY_HIT("sounds/special_enemy_hit.wav", Category.SFX),
 	/** Player ship destroyed. */
 	PLAYER_EXPLOSION("sounds/player_explosion.wav", Category.SFX),
     /** Player ship damaged. */
