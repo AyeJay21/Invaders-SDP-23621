@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import engine.Cooldown;
 import engine.Core;
 import engine.GameState;
+import engine.PlayerSession;
 import engine.Score;
 
 /**
@@ -18,14 +18,8 @@ import engine.Score;
  */
 public class ScoreScreen extends Screen {
 
-	/** Milliseconds between changes in user selection. */
-	private static final int SELECTION_TIME = 200;
 	/** Maximum number of high scores. */
 	private static final int MAX_HIGH_SCORE_NUM = 7;
-	/** Code of first mayus character. */
-	private static final int FIRST_CHAR = 65;
-	/** Code of last mayus character. */
-	private static final int LAST_CHAR = 90;
 
 	/** Current score. */
 	private int score;
@@ -39,15 +33,13 @@ public class ScoreScreen extends Screen {
 	private List<Score> highScores;
 	/** Checks if current score is a new high score. */
 	private boolean isNewRecord;
-	/** Player name for record input. */
-	private char[] name;
-	/** Character of players name selected for change. */
-	private int nameCharSelected;
-	/** Time between changes in user selection. */
-	private Cooldown selectionCooldown;
+	/** Name of the player the score belongs to, chosen at game start. */
+	private String playerName;
 
 	/**
 	 * Constructor, establishes the properties of the screen.
+	 * A score that makes the ranking is saved right away, so it is not lost
+	 * if the window is closed on this screen.
 	 * 
 	 * @param width
 	 *            Screen width.
@@ -69,17 +61,18 @@ public class ScoreScreen extends Screen {
 		Core.getAchievementManager().recordAccuracy(this.bulletsShot,
 				this.shipsDestroyed, gameState.getLevelsCompletedRun());
 		this.isNewRecord = false;
-		this.name = "AAA".toCharArray();
-		this.nameCharSelected = 0;
-		this.selectionCooldown = Core.getCooldown(SELECTION_TIME);
-		this.selectionCooldown.reset();
+		this.playerName = PlayerSession.getInstance().getNameOrDefault();
 
 		try {
 			this.highScores = Core.getFileManager().loadHighScores();
-			if (highScores.size() < MAX_HIGH_SCORE_NUM
+			// A score of zero never makes the ranking.
+			if (this.score > 0
+					&& (highScores.size() < MAX_HIGH_SCORE_NUM
 					|| highScores.get(highScores.size() - 1).getScore()
-					< this.score)
+					< this.score)) {
 				this.isNewRecord = true;
+				saveScore();
+			}
 
 		} catch (IOException e) {
 			logger.warning("Couldn't load high scores!");
@@ -109,51 +102,20 @@ public class ScoreScreen extends Screen {
 				// Return to main menu.
 				this.returnCode = 1;
 				this.isRunning = false;
-				if (this.isNewRecord)
-					saveScore();
 			} else if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
 				// Play again.
 				this.returnCode = 2;
 				this.isRunning = false;
-				if (this.isNewRecord)
-					saveScore();
-			}
-
-			if (this.isNewRecord && this.selectionCooldown.checkFinished()) {
-				if (inputManager.isKeyDown(KeyEvent.VK_RIGHT)) {
-					this.nameCharSelected = this.nameCharSelected == 2 ? 0
-							: this.nameCharSelected + 1;
-					this.selectionCooldown.reset();
-				}
-				if (inputManager.isKeyDown(KeyEvent.VK_LEFT)) {
-					this.nameCharSelected = this.nameCharSelected == 0 ? 2
-							: this.nameCharSelected - 1;
-					this.selectionCooldown.reset();
-				}
-				if (inputManager.isKeyDown(KeyEvent.VK_UP)) {
-					this.name[this.nameCharSelected] =
-							(char) (this.name[this.nameCharSelected]
-									== LAST_CHAR ? FIRST_CHAR
-							: this.name[this.nameCharSelected] + 1);
-					this.selectionCooldown.reset();
-				}
-				if (inputManager.isKeyDown(KeyEvent.VK_DOWN)) {
-					this.name[this.nameCharSelected] =
-							(char) (this.name[this.nameCharSelected]
-									== FIRST_CHAR ? LAST_CHAR
-							: this.name[this.nameCharSelected] - 1);
-					this.selectionCooldown.reset();
-				}
 			}
 		}
 
 	}
 
 	/**
-	 * Saves the score as a high score.
+	 * Saves the score as a high score, under the current player's name.
 	 */
 	private void saveScore() {
-		highScores.add(new Score(new String(this.name), score));
+		highScores.add(new Score(this.playerName, score));
 		Collections.sort(highScores);
 		if (highScores.size() > MAX_HIGH_SCORE_NUM)
 			highScores.remove(highScores.size() - 1);
@@ -161,7 +123,7 @@ public class ScoreScreen extends Screen {
 		try {
 			Core.getFileManager().saveHighScores(highScores);
 		} catch (IOException e) {
-			logger.warning("Couldn't load high scores!");
+			logger.warning("Couldn't save high scores!");
 		}
 	}
 
@@ -180,7 +142,7 @@ public class ScoreScreen extends Screen {
 				this.shipsDestroyed, accuracy, this.isNewRecord);
 
 		if (this.isNewRecord)
-			drawManager.drawNameInput(this, this.name, this.nameCharSelected);
+			drawManager.drawNewRecordBanner(this, this.playerName);
 		drawManager.completeDrawing(this);
 	}
 }
