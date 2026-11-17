@@ -1021,7 +1021,8 @@ public final class DrawManager {
 	}
 
 	/**
-	 * Draws main menu.
+	 * Draws the main menu, one row per item, through drawMenuRow so the
+	 * main menu and every other screen share one selected-row style.
 	 *
 	 * @param screen
 	 *            Screen to draw on.
@@ -1029,23 +1030,10 @@ public final class DrawManager {
 	 *            Item the cursor is on.
 	 */
 	public void drawMenu(final Screen screen, final MenuItem selected) {
-		for (MenuItem item : MenuItem.values()) {
-			int baseline = menuItemBaseline(screen, item.ordinal());
-
-			if (item == selected) {
-				String text = "> " + item.getTitle() + " <";
-				backBufferGraphics.setColor(Color.GREEN);
-				backBufferGraphics.setFont(fontSelected);
-				backBufferGraphics.drawString(text, screen.getWidth() / 2
-						- fontSelectedMetrics.stringWidth(text) / 2, baseline);
-			} else {
-				if (!item.isEnabled())
-					backBufferGraphics.setColor(Color.DARK_GRAY);
-				else
-					backBufferGraphics.setColor(Color.WHITE);
-				drawCenteredRegularString(screen, item.getTitle(), baseline);
-			}
-		}
+		for (MenuItem item : MenuItem.values())
+			drawMenuRow(screen, item.getTitle(),
+					menuItemBaseline(screen, item.ordinal()),
+					item == selected, item.isEnabled());
 	}
 
 	/**
@@ -1711,8 +1699,8 @@ public final class DrawManager {
 	}
 
 	/**
-	 * Draws a centered row of text in the menu colours: green when
-	 * selected, white otherwise.
+	 * Draws a centered row of text in the menu style, as enabled. See the
+	 * five-argument version.
 	 *
 	 * @param screen
 	 *            Screen to draw on.
@@ -1724,13 +1712,15 @@ public final class DrawManager {
 	 *            Whether the row is currently selected.
 	 */
 	public void drawMenuRow(final Screen screen, final String string,
-							final int height, final boolean selected) {
+			final int height, final boolean selected) {
 		drawMenuRow(screen, string, height, selected, true);
 	}
 
 	/**
-	 * Draws a centered row of text in the menu colours: green when
-	 * selected, dark grey when disabled, white otherwise.
+	 * Draws a centered row of text in the menu style shared by every screen,
+	 * the main menu included: the selected row is green, in the larger font
+	 * and between "> <" markers; a disabled row is dark grey; any other row
+	 * is white.
 	 *
 	 * @param screen
 	 *            Screen to draw on.
@@ -1744,8 +1734,8 @@ public final class DrawManager {
 	 *            Whether the row can be chosen.
 	 */
 	public void drawMenuRow(final Screen screen, final String string,
-							final int height, final boolean selected,
-							final boolean enabled) {
+			final int height, final boolean selected,
+			final boolean enabled) {
 		if (selected) {
 			String text = "> " + string + " <";
 			backBufferGraphics.setColor(Color.GREEN);

@@ -7,6 +7,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
+import engine.soundEngine.SoundManager;
+
 /**
  * Manages keyboard and mouse input for the provided screen.
  * 
@@ -22,13 +24,15 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 	/** Singleton instance of the class. */
 	private static InputManager instance;
 	/** Current mouse X position. */
-	private int mouseX;
+	private volatile int mouseX;
 	/** Current mouse Y position. */
-	private int mouseY;
+	private volatile int mouseY;
 	/** Whether the mouse has moved since the last check. */
 	private boolean isMoved = false;
 	/** Whether a mouse button is currently held down. */
 	private boolean isClick;
+	/** Whether the left mouse button is held down. */
+	private volatile boolean leftMousePressed;
 
 	/**
 	 * Private constructor.
@@ -67,8 +71,25 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 	 */
 	@Override
 	public void keyPressed(final KeyEvent key) {
-		if (key.getKeyCode() >= 0 && key.getKeyCode() < NUM_KEYS)
-			keys[key.getKeyCode()] = true;
+		final int code = key.getKeyCode();
+		if (code < 0 || code >= NUM_KEYS)
+			return;
+		// Auto-repeat fires keyPressed again while a key is held, so only the
+		// first event counts as a real press.
+		if (keys[code])
+			return;
+		keys[code] = true;
+		if (code == KeyEvent.VK_M)
+			toggleMute();
+	}
+
+	/**
+	 * Mutes or unmutes all audio. Bound to the M key on every screen, because
+	 * this manager is the only key listener attached to the frame.
+	 */
+	private static void toggleMute() {
+		final SoundManager sound = SoundManager.getInstance();
+		sound.setMuted(!sound.isMuted());
 	}
 
 	/**
@@ -147,12 +168,14 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 		return moved;
 	}
 	/**
-	 * Does nothing.
-	 * 
-	 * @param e Mouse event.
+	 * Updates the mouse position and records movement while dragging.
+	 *
+	 * @param e
+	 *            Mouse drag event containing the current pointer position.
 	 */
 	@Override
 	public void mouseDragged(final MouseEvent e) {
+		mouseMoved(e);
 	}
 	/**
 	 * Does nothing.
@@ -172,6 +195,8 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 		mouseX = e.getX();
 		mouseY = e.getY();
 		isClick = true;
+		if (e.getButton() == MouseEvent.BUTTON1)
+			this.leftMousePressed = true;
 	}
 	/**
 	 * Marks the mouse buttons as released
@@ -181,6 +206,10 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 	@Override
 	public void mouseReleased(final MouseEvent e) {
 		isClick = false;
+		mouseX = e.getX();
+		mouseY = e.getY();
+		if (e.getButton() == MouseEvent.BUTTON1)
+			this.leftMousePressed = false;
 	}
 	/**
 	 * Does nothing.
@@ -202,5 +231,15 @@ public final class InputManager implements KeyListener, MouseMotionListener, Mou
 	@Override
 	public void mouseExited(final MouseEvent e) {
 		isClick = false;
+		this.leftMousePressed = false;
+	}
+
+	/**
+	 * Returns whether the left mouse button is currently held down.
+	 *
+	 * @return true if the left mouse button is held down.
+	 */
+	public boolean isLeftMousePressed() {
+		return this.leftMousePressed;
 	}
 }
