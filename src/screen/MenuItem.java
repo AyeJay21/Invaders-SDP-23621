@@ -22,6 +22,8 @@ public enum MenuItem {
 	SHOP("Shop", 5, true),
 	/** Achievements screen. */
 	ACHIEVEMENTS("Achievements", 6, true),
+	/** Difficulty screen. */
+	DIFFICULTY("Difficulty", 8, true),
 	/** Shows the high score table. */
 	HIGH_SCORES("High scores", 3, true),
 	/** Settings screen. */

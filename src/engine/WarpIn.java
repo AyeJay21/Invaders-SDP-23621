@@ -108,6 +108,14 @@ public final class WarpIn {
 		return p < IMPACT && (p >= 0 || !destroyed);
 	}
 
+	/**
+	 * Drops a planned or running warp. Used when the level start countdown
+	 * is skipped, so the ship appears at once instead of beaming in later.
+	 */
+	public void skip() {
+		this.startTime = -1;
+	}
+
 	/** @return True once per warp, at the impact (to shake the screen). */
 	public boolean takeImpact() {
 		if (this.startTime < 0 || this.impactTaken || progress() < IMPACT)
