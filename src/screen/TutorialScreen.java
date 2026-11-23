@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import engine.DrawManager.SpriteType;
+import engine.soundEngine.MenuSounds;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.EnemyShip;
@@ -70,6 +71,7 @@ public final class TutorialScreen extends Screen {
             if (step == Step.COMPLETE) {
                 // Require a fresh press so a held key cannot skip the message.
                 if (enterDown && !enterWasDown) {
+                    MenuSounds.playSelect();
                     returnCode = 2;
                     isRunning = false;
                 }

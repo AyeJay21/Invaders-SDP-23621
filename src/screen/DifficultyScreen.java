@@ -6,6 +6,7 @@ import engine.Cooldown;
 import engine.Core;
 import engine.Difficulty;
 import engine.DifficultyManager;
+import engine.soundEngine.MenuSounds;
 
 /**
  * Implements the difficulty screen.
@@ -84,8 +85,12 @@ public class DifficultyScreen extends Screen {
 			final int mouseY = this.inputManager.getMouseY();
 			for (int row = 0; row < Difficulty.values().length; row++)
 				if (this.drawManager.isOnMenuRow(rowBaseline(row), SPACING,
-						mouseY))
+						mouseY)) {
+					// Hovering only moves the cursor; picking is a key press.
+					if (Difficulty.values()[row] != this.selected)
+						MenuSounds.playMove();
 					choose(Difficulty.values()[row]);
+				}
 		}
 	}
 
@@ -99,6 +104,8 @@ public class DifficultyScreen extends Screen {
 		final Difficulty[] modes = Difficulty.values();
 		final int index = Math.floorMod(this.selected.ordinal() + direction,
 				modes.length);
+		if (modes[index] != this.selected)
+			MenuSounds.playSelect();
 		choose(modes[index]);
 	}
 

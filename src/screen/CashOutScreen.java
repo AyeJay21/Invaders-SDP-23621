@@ -5,6 +5,7 @@ import java.awt.event.KeyEvent;
 import engine.Core;
 import engine.DiamondManager;
 import engine.GameState;
+import engine.soundEngine.MenuSounds;
 
 /**
  * Shown right after a level is cleared, when there is a next level to play
@@ -91,6 +92,7 @@ public class CashOutScreen extends Screen {
 			return;
 
 		if (escapeDown) {
+			MenuSounds.playSelect();
 			// Bank what's been earned so far, then end the run.
 			DiamondManager.getInstance().addDiamonds(this.pendingDiamonds);
 			this.cashedOut = true;
@@ -99,6 +101,7 @@ public class CashOutScreen extends Screen {
 					+ " diamonds, balance: "
 					+ DiamondManager.getInstance().getDiamonds());
 		} else if (spaceDown) {
+			MenuSounds.playSelect();
 			// Push on: diamonds stay pending, at risk.
 			this.isRunning = false;
 			this.logger.info("Continuing with " + this.pendingDiamonds
