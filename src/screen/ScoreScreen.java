@@ -9,6 +9,7 @@ import engine.Cooldown;
 import engine.Core;
 import engine.GameState;
 import engine.Score;
+import engine.soundEngine.MenuSounds;
 
 /**
  * Implements the score screen.
@@ -106,12 +107,14 @@ public class ScoreScreen extends Screen {
 		draw();
 		if (this.inputDelay.checkFinished()) {
 			if (inputManager.isKeyDown(KeyEvent.VK_ESCAPE)) {
+				MenuSounds.playSelect();
 				// Return to main menu.
 				this.returnCode = 1;
 				this.isRunning = false;
 				if (this.isNewRecord)
 					saveScore();
 			} else if (inputManager.isKeyDown(KeyEvent.VK_SPACE)) {
+				MenuSounds.playSelect();
 				// Play again.
 				this.returnCode = 2;
 				this.isRunning = false;

@@ -22,4 +22,9 @@ public final class MenuSounds {
         lastPlayed = now;
         SoundManager.getInstance().playSfx(Sound.MENU_MOVE);
     }
+
+    /** Plays the click heard when a menu entry is confirmed. */
+    public static void playSelect() {
+        SoundManager.getInstance().playSfx(Sound.MENU_SELECT);
+    }
 }

@@ -33,6 +33,7 @@ import engine.ScreenShake;
 import engine.PointsEffect;
 import engine.PlayerSounds;
 import engine.soundEngine.ItemSounds;
+import engine.soundEngine.MenuSounds;
 import entity.Bullet;
 import entity.BulletPool;
 import entity.Coin;
@@ -816,6 +817,7 @@ public class GameScreen extends Screen {
 	 * Carries out whichever pause menu option the cursor was on.
 	 */
 	private void confirmPauseSelection() {
+		MenuSounds.playSelect();
 		switch (this.pauseSelection) {
 			case RESUME:
 				resumeGameplay();
