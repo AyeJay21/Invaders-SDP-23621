@@ -8,6 +8,9 @@ package engine;
  */
 public class GameSettings {
 
+	/** Speed of the enemies' bullets when a level does not set its own. */
+	public static final int DEFAULT_ENEMY_BULLET_SPEED = 4;
+
 	/** Width of the level's enemy formation. */
 	private int formationWidth;
 	/** Height of the level's enemy formation. */
@@ -20,6 +23,8 @@ public class GameSettings {
 	private int twoHitEnemyCount;
 	/** Whether the whole formation moves diagonally (Team A1). */
 	private boolean diagonalMovement;
+	/** Speed of the enemies' bullets, in pixels per frame. */
+	private int enemyBulletSpeed;
 
 	/**
 	 * Constructor.
@@ -50,6 +55,34 @@ public class GameSettings {
 	public GameSettings(final int formationWidth, final int formationHeight,
 			final int baseSpeed, final int shootingFrecuency,
 			final boolean diagonalMovement, final int twoHitEnemyCount) {
+		this(formationWidth, formationHeight, baseSpeed, shootingFrecuency,
+				diagonalMovement, twoHitEnemyCount,
+				DEFAULT_ENEMY_BULLET_SPEED);
+	}
+
+	/**
+	 * Full constructor, also setting how fast the enemies' bullets fly. Used
+	 * by the difficulty modes, which speed the bullets up or slow them down.
+	 *
+	 * @param formationWidth
+	 *            Width of the level's enemy formation.
+	 * @param formationHeight
+	 *            Height of the level's enemy formation.
+	 * @param baseSpeed
+	 *            Speed of the enemies.
+	 * @param shootingFrecuency
+	 *            Frecuency of enemy shootings, +/- 30%.
+	 * @param diagonalMovement
+	 *            True if the whole formation moves diagonally.
+	 * @param twoHitEnemyCount
+	 *            Number of enemies that take two hits.
+	 * @param enemyBulletSpeed
+	 *            Speed of the enemies' bullets, in pixels per frame.
+	 */
+	public GameSettings(final int formationWidth, final int formationHeight,
+			final int baseSpeed, final int shootingFrecuency,
+			final boolean diagonalMovement, final int twoHitEnemyCount,
+			final int enemyBulletSpeed) {
 		if (twoHitEnemyCount < 0
 				|| (twoHitEnemyCount > 0
 						&& twoHitEnemyCount >= formationWidth * formationHeight))
@@ -61,6 +94,7 @@ public class GameSettings {
 		this.baseSpeed = baseSpeed;
 		this.shootingFrecuency = shootingFrecuency;
 		this.diagonalMovement = diagonalMovement;
+		this.enemyBulletSpeed = enemyBulletSpeed;
 	}
 
 	/**
@@ -122,6 +156,13 @@ public class GameSettings {
 	 */
 	public final boolean isDiagonalMovement() {
 		return diagonalMovement;
+	}
+
+	/**
+	 * @return Speed of the enemies' bullets, in pixels per frame.
+	 */
+	public final int getEnemyBulletSpeed() {
+		return this.enemyBulletSpeed;
 	}
 
 }

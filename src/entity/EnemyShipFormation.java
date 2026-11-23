@@ -37,8 +37,6 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	private static final int X_SPEED = 8;
 	/** Downwards speed of the formation. */
 	private static final int Y_SPEED = 4;
-	/** Speed of the bullets shot by the members. */
-	private static final int BULLET_SPEED = 4;
 	/** Proportion of differences between shooting times. */
 	private static final double SHOOTING_VARIANCE = .2;
 	/** Margin on the sides of the screen. */
@@ -77,6 +75,8 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 	private int baseSpeed;
 	/** Speed of the ships. */
 	private int movementSpeed;
+	/** Speed of the bullets shot by the members. */
+	private int bulletSpeed;
 	/** Current direction the formation is moving on. */
 	private Direction currentDirection;
 	/** Direction the formation was moving previously. */
@@ -144,6 +144,7 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 				* SHOOTING_VARIANCE);
 		this.baseSpeed = gameSettings.getBaseSpeed();
 		this.movementSpeed = this.baseSpeed;
+		this.bulletSpeed = gameSettings.getEnemyBulletSpeed();
 		this.positionX = INIT_POS_X;
 		this.positionY = INIT_POS_Y;
 		this.shooters = new ArrayList<EnemyShip>();
@@ -476,7 +477,8 @@ public class EnemyShipFormation implements Iterable<EnemyShip> {
 		if (this.shootingCooldown.checkFinished()) {
 			this.shootingCooldown.reset();
 			bullets.add(BulletPool.getBullet(shooter.getPositionX()
-					+ shooter.width / 2, shooter.getPositionY(), BULLET_SPEED));
+					+ shooter.width / 2, shooter.getPositionY(),
+					this.bulletSpeed));
 		}
 	}
 

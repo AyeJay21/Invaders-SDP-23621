@@ -502,6 +502,11 @@ public class GameScreen extends Screen {
 			return;
 		}
 
+		// One press of the fire key starts the level right away.
+		if (!this.inputDelay.checkFinished()
+				&& inputManager.isKeyDown(KeyEvent.VK_SPACE))
+			skipCountdown();
+
 		if (this.inputDelay.checkFinished() && !this.levelFinished) {
 
 			if (!this.ship.isDestroyed()) {
@@ -831,6 +836,18 @@ public class GameScreen extends Screen {
 		}
 	}
 
+	/**
+	 * Ends the level start countdown immediately, so the player can begin
+	 * without waiting for it. The Warp In effect (a shop item timed to land
+	 * on "GO!") is dropped along with the countdown.
+	 */
+	private void skipCountdown() {
+		this.inputDelay.finish();
+		if (this.warpIn != null)
+			this.warpIn.skip();
+		this.logger.info("Level countdown skipped");
+	}
+
 	/** Resumes the level without consuming the boss's warning time. */
 	private void resumeGameplay() {
 		if (this.paused && this.midBoss instanceof FinalBoss) {
@@ -984,7 +1001,7 @@ public class GameScreen extends Screen {
 			drawManager.drawHorizontalLine(this, this.height / 2 + this.height
 					/ 12);
 			drawManager.drawItemHint(this, this.items); // Item System (Team CS)
-			drawManager.drawKeyHints(this, "P to pause");
+			drawManager.drawKeyHints(this, "space to skip, P to pause");
 		}
 
 

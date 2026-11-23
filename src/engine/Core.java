@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 import entity.Ship;
 import screen.AchievementsScreen;
 import screen.CashOutScreen;
+import screen.DifficultyScreen;
 import screen.GameScreen;
 import screen.HighScoreScreen;
 import screen.ScoreScreen;
@@ -36,8 +37,8 @@ public final class Core {
 	/** Max fps of current screen. */
 	private static final int FPS = 60;
 
-	/** Max lives. */
-	private static final int MAX_LIVES = 3;
+	/** Lives a run starts with, unless the difficulty mode says otherwise. */
+	private static final int DEFAULT_LIVES = 3;
 	/** Levels between extra life. */
 	private static final int EXTRA_LIFE_FRECUENCY = 3;
 	/** Total number of levels. */
@@ -141,7 +142,7 @@ public final class Core {
 
 		int returnCode = startLevel == 1 ? 1 : 2;
 		do {
-			gameState = new GameState(startLevel, 0, MAX_LIVES, 0, 0, 0);
+			gameState = new GameState(startLevel, 0, getMaxLives(), 0, 0, 0);
 
 			switch (returnCode) {
 			case 1:
@@ -163,13 +164,13 @@ public final class Core {
 				}
 				// Game & score.
 				do {
-					// One extra live every few levels.
+					// One extra live every few levels, up to the mode's limit.
 					boolean bonusLife = gameState.getLevel()
 							% EXTRA_LIFE_FRECUENCY == 0
-							&& gameState.getLivesRemaining() < MAX_LIVES;
+							&& gameState.getLivesRemaining() < getMaxLives();
 					
 					currentScreen = new GameScreen(gameState,
-							gameSettings.get(gameState.getLevel() - 1),
+							getGameSettings(gameState.getLevel()),
 							bonusLife, width, height, FPS);
 					LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
 							+ " game screen at " + FPS + " fps.");
@@ -244,6 +245,14 @@ public final class Core {
 						+ " ship select screen at " + FPS + " fps.");
 				returnCode = frame.setScreen(currentScreen);
 				LOGGER.info("Closing ship select screen.");
+				break;
+			case 8:
+				// Difficulty.
+				currentScreen = new DifficultyScreen(width, height, FPS);
+				LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+						+ " difficulty screen at " + FPS + " fps.");
+				returnCode = frame.setScreen(currentScreen);
+				LOGGER.info("Closing difficulty screen.");
 				break;
 			default:
 				// No screen for this code yet - back to the menu instead of
@@ -445,6 +454,32 @@ public final class Core {
 	/** @return Number of levels in the game. */
 	public static int getNumLevels() {
 		return NUM_LEVELS;
+	}
+
+	/**
+	 * Settings of a level, scaled to the difficulty mode chosen on the
+	 * difficulty screen.
+	 *
+	 * @param level
+	 *            Level number, counted from 1.
+	 * @return The level's settings in the current mode.
+	 */
+	public static GameSettings getGameSettings(final int level) {
+		final int index = Math.max(0, Math.min(NUM_LEVELS - 1, level - 1));
+		return DifficultyManager.getInstance().getDifficulty()
+				.apply(gameSettings.get(index));
+	}
+
+	/**
+	 * Lives a run starts with, and can never go above: the chosen difficulty
+	 * mode decides.
+	 *
+	 * @return Starting lives of the current mode.
+	 */
+	public static int getMaxLives() {
+		final int lives = DifficultyManager.getInstance().getDifficulty()
+				.getStartingLives();
+		return lives > 0 ? lives : DEFAULT_LIVES;
 	}
 
 	/**
