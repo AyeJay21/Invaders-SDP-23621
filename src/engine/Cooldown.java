@@ -69,6 +69,11 @@ public class Cooldown {
 							* (this.milliseconds + this.variance));
 	}
 
+	/** Ends the cooldown right away, so the next check reports finished. */
+	public final void finish() {
+		this.time = 0;
+	}
+
 	/** Keeps a running cooldown from advancing while gameplay is paused. */
 	public final void delayBy(final long pausedMilliseconds) {
 		if (this.time != 0 && pausedMilliseconds > 0)
