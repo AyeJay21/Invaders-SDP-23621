@@ -1,7 +1,4 @@
-package engine;
-
-import engine.soundEngine.Sound;
-import engine.soundEngine.SoundManager;
+package engine.soundEngine;
 
 public final class PlayerSounds {
 

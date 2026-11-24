@@ -7,11 +7,15 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
+
 import engine.CurrencyManager;
 import engine.DiamondManager;
 import engine.DrawManager.SpriteType;
 import engine.PurchaseManager;
 import engine.PurchaseManager.PurchaseResult;
+import engine.soundEngine.MenuSounds;
 import engine.soundEngine.Sound;
 import engine.soundEngine.SoundManager;
 import entity.Ship.ShipType;
@@ -172,7 +176,6 @@ public class ShopScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
-
 		if (this.keysWereDown == null) {
 			// Keys and clicks still held from the menu must not buy anything.
 			this.keysWereDown = new boolean[KEYS.length];
@@ -208,10 +211,10 @@ public class ShopScreen extends Screen {
 		if (pressed(KeyEvent.VK_ESCAPE)) {
 			this.isRunning = false;
 		} else if (pressed(KeyEvent.VK_LEFT) || pressed(KeyEvent.VK_A)) {
-			showTab(Tab.values()[Math.floorMod(this.tab.ordinal() - 1,
+			changeTab(Tab.values()[Math.floorMod(this.tab.ordinal() - 1,
 					Tab.values().length)]);
 		} else if (pressed(KeyEvent.VK_RIGHT) || pressed(KeyEvent.VK_D)) {
-			showTab(Tab.values()[(this.tab.ordinal() + 1)
+			changeTab(Tab.values()[(this.tab.ordinal() + 1)
 					% Tab.values().length]);
 		} else if (pressed(KeyEvent.VK_UP) || pressed(KeyEvent.VK_W)) {
 			select(this.selected - 1);
@@ -240,7 +243,7 @@ public class ShopScreen extends Screen {
 		int y = this.inputManager.getMouseY();
 		for (Tab each : Tab.values())
 			if (tabArea(each).contains(x, y)) {
-				showTab(each);
+				changeTab(each);
 				return;
 			}
 		for (int row = 0; row < visibleRows(); row++)
@@ -265,6 +268,18 @@ public class ShopScreen extends Screen {
 				buySelected(currency);
 				return;
 			}
+	}
+
+	/**
+	 * Switches tab the way the player asked for, so the click is heard.
+	 *
+	 * @param newTab
+	 *            Tab to show.
+	 */
+	private void changeTab(final Tab newTab) {
+		if (newTab != this.tab)
+			MenuSounds.playSelect();
+		showTab(newTab);
 	}
 
 	/**
@@ -387,6 +402,11 @@ public class ShopScreen extends Screen {
 						TOO_EXPENSIVE);
 				break;
 		}
+
+		// A rejected purchase still needs to be heard; a successful one is
+		// covered by the purchase sound above.
+		if (result != PurchaseResult.SUCCESS)
+			MenuSounds.playSelect();
 	}
 
 	/**
