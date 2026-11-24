@@ -32,6 +32,10 @@ jobs:
   # because Swing keeps the window open after the main thread dies, so the
   # verdict comes from the log.
   #
+  # The game now opens on the player name screen, which waits for a key. The
+  # job presses Enter there (xdotool), so it checks the real startup path:
+  # name screen first, then the title screen.
+  #
   # CI has no res/font.ttf (it is gitignored), so this also covers a fresh
   # clone or an IDE that does not put res on the classpath.
   smoke:
@@ -49,11 +53,39 @@ jobs:
           mkdir -p bin
           javac -d bin $(find src -name '*.java')
 
-      - name: Install virtual display
-        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb
+      - name: Install virtual display and key simulator
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb xdotool
 
-      - name: Run the game for 10 seconds
-        run: xvfb-run -a timeout 10 java -cp bin:res engine.Core > game.log 2>&1 || true
+      - name: Run the game and confirm the player name
+        run: |
+          xvfb-run -a bash -c '
+            timeout 30 java -cp bin:res engine.Core > game.log 2>&1 &
+            GAME=$!
+            # The game opens on the player name screen, which waits for a key.
+            for i in $(seq 1 40); do
+              grep -q "player name screen" game.log && break
+              sleep 0.5
+            done
+            # The name screen ignores keys during its first second.
+            sleep 2
+            # Confirm the name. The game reads the keyboard 60 times a second,
+            # so the key is held for a moment: a quick tap can fall between
+            # two readings. Try again if it was lost, and stop as soon as the
+            # title screen shows up.
+            for attempt in 1 2 3 4; do
+              xdotool keydown Return
+              sleep 0.3
+              xdotool keyup Return
+              for i in 1 2 3 4 5 6; do
+                grep -q "title screen" game.log && break 2
+                sleep 0.5
+              done
+            done
+            # Let the title screen run for a few seconds before stopping.
+            sleep 3
+            kill $GAME 2>/dev/null
+            wait $GAME 2>/dev/null
+          ' || true
 
       - name: Check the log
         run: |
@@ -62,8 +94,12 @@ jobs:
             echo "::error::The game threw an exception while starting. See the log above."
             exit 1
           fi
-          if ! grep -q "title screen" game.log; then
-            echo "::error::The game never reached the title screen."
+          if ! grep -q "player name screen" game.log; then
+            echo "::error::The game never reached the player name screen."
             exit 1
           fi
-          echo "Reached the title screen with no exceptions."
+          if ! grep -q "title screen" game.log; then
+            echo "::error::The name screen was never confirmed, so the game never reached the title screen."
+            exit 1
+          fi
+          echo "Reached the player name screen, then the title screen, with no exceptions."
