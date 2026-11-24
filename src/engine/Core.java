@@ -14,6 +14,7 @@ import screen.CashOutScreen;
 import screen.DifficultyScreen;
 import screen.GameScreen;
 import screen.HighScoreScreen;
+import screen.PlayerNameScreen;
 import screen.ScoreScreen;
 import screen.Screen;
 import screen.SettingsScreen;
@@ -140,7 +141,19 @@ public final class Core {
 		if (startLevel < 1 || startLevel > NUM_LEVELS)
 			startLevel = 1;
 
-		int returnCode = startLevel == 1 ? 1 : 2;
+		// Ask who is playing before anything else. ESC quits the game.
+		currentScreen = new PlayerNameScreen(width, height, FPS);
+		LOGGER.info("Starting " + WIDTH + "x" + HEIGHT
+				+ " player name screen at " + FPS + " fps.");
+		int returnCode = frame.setScreen(currentScreen);
+		LOGGER.info("Closing player name screen.");
+		if (returnCode == 0) {
+			fileHandler.flush();
+			fileHandler.close();
+			System.exit(0);
+		}
+
+		returnCode = startLevel == 1 ? 1 : 2;
 		do {
 			gameState = new GameState(startLevel, 0, getMaxLives(), 0, 0, 0);
 
