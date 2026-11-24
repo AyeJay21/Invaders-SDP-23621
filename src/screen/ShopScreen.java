@@ -7,6 +7,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
+
 import engine.CurrencyManager;
 import engine.DiamondManager;
 import engine.DrawManager.SpriteType;
@@ -173,7 +176,6 @@ public class ShopScreen extends Screen {
 	 */
 	protected final void update() {
 		super.update();
-
 		if (this.keysWereDown == null) {
 			// Keys and clicks still held from the menu must not buy anything.
 			this.keysWereDown = new boolean[KEYS.length];

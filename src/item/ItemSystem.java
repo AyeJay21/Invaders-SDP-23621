@@ -23,6 +23,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import engine.soundEngine.Sound;
+import engine.soundEngine.SoundManager;
+
 import engine.Core;
 import entity.Entity;
 import item.ItemAPI.*;
@@ -290,6 +293,7 @@ public final class ItemSystem {
             usingSlot = false;
         }
         if (result == UseResult.EFFECT_ALREADY_ACTIVE && item != null) {
+            SoundManager.getInstance().playSfx(Sound.MENU_CANCEL);
             showNotice(item.displayName + " is already active");
             logger.info("Item not used: " + item.displayName + " is already active.");
         }
@@ -394,6 +398,7 @@ public final class ItemSystem {
                 logger.info("Item dropped: " + name + position(event.bounds) + ".");
                 break;
             case ITEM_COLLECTED:
+                playItemSound(item);
                 if (event.slotIndex != null) {
                     int key = event.slotIndex + 1;
                     logger.info("Item collected: " + name + " stored in slot " + key + ".");
@@ -410,6 +415,7 @@ public final class ItemSystem {
                     showNotice(name + " x" + multiplier(item.magnitude));
                 break;
             case EFFECT_STARTED: {
+                playItemSound(item);
                 Integer stacks = stacksOf(event.effectId);
                 String label = name + (stacks != null ? " x" + stacks : "");
                 logger.info("Item effect started: " + label + ".");
@@ -426,6 +432,7 @@ public final class ItemSystem {
                 logger.info("Item drop disappeared: " + name + ".");
                 break;
             case ITEM_CONVERTED: {
+                SoundManager.getInstance().playSfx(Sound.MENU_CANCEL);
                 ItemInfo magnet = equippedThisRun();
                 int points = magnet == null ? 0 : magnet.magnitude.intValue();
                 hooks.addScore(points);
@@ -483,5 +490,37 @@ public final class ItemSystem {
             case SCORE_BOOST: return new Color(255, 100, 200);
             default: return Color.WHITE;
         }
+    }
+
+    private void playItemSound(final ItemInfo item) {
+        if (item == null || item.effectKind == null)
+            return;
+        Sound sound;
+        switch (item.effectKind) {
+            case SHIELD:
+                sound = Sound.ITEM_SHIELD;
+                break;
+            case FREEZE:
+                sound = Sound.ITEM_FREEZE;
+                break;
+            case BOOST:
+                sound = Sound.ITEM_BOOST;
+                break;
+            case SCORE_BOOST:
+                sound = Sound.ITEM_SCORE_BOOST;
+                break;
+            case LIFE:
+                sound = Sound.ITEM_LIFE;
+                break;
+            case RAPID_FIRE:
+                sound = Sound.ITEM_RAPID_FIRE;
+                break;
+            case BULLET_SPEED:
+                sound = Sound.ITEM_BULLET_SPEED;
+                break;
+            default:
+                return;
+        }
+        SoundManager.getInstance().playSfx(sound);
     }
 }
